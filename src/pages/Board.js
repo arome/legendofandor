@@ -63,8 +63,19 @@ export default class GameBoard extends Component {
     const to = parseInt(area.name)
     if (this.lastSelected === to) {
       this.showPopup()
-    } else if (!this.state.path.steps.some((step) => step.includes(to))) {
+    } else {
+      let steps = []
+      let stateSteps = this.state.path.steps
+      const areaInPath = stateSteps.findIndex((step) => step.includes(to))
+      if (this.props.G.players[this.props.ctx.currentPlayer].positionOnMap === to) {
+        steps = []
+        this.lastSelected = null
+      } else if (areaInPath > -1) {
+        steps = stateSteps.slice(0, areaInPath + 1)
+        this.lastSelected = to
+      } else {
       const from = this.lastSelected || this.props.G.players[this.props.ctx.currentPlayer].positionOnMap
+        this.lastSelected = to
       const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
         OUT: {
           heuristic: function heuristic(n) {
@@ -77,12 +88,12 @@ export default class GameBoard extends Component {
           },
         },
       })
-      this.lastSelected = to
-      let steps = []
       const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
       if (this.state.path.steps.length > 0) {
         let newTo = newSteps.map((step) => step[1])
-        let oldTo = [this.state.path.steps[0][0]].concat(this.state.path.steps.map((step) => step[1]))
+          let oldTo = [this.props.G.players[this.props.ctx.currentPlayer].positionOnMap].concat(
+            this.state.path.steps.map((step) => step[1])
+          )
         let newList = []
         for (let i = 0; i < oldTo.length && newList.length === 0; i++) {
           const pos = newTo.indexOf(oldTo[i])
@@ -99,6 +110,7 @@ export default class GameBoard extends Component {
         }
       }
       if (steps.length === 0) steps = this.state.path.steps.concat(newSteps)
+      }
       this.setState({ path: { circle: { radius: 10 }, steps } })
     }
   }
