@@ -180,7 +180,19 @@ export default class GameBoard extends Component {
     })
   }
 
-  renderPlayers() {}
+  renderPlayers = () =>
+    this.props.G.players.map((player, pos) => (
+      <img
+        key={pos}
+        src={character}
+        alt="character"
+        className="character"
+        style={{
+          ...this.getPlayerPosition(this.MAP.areas[player.positionOnMap]),
+          ...this.getCharacterSize(),
+        }}
+      />
+    ))
 
   render() {
     return (
@@ -204,18 +216,7 @@ export default class GameBoard extends Component {
             {this.state.hoveredArea?.name}
           </span>
         )}
-        {this.props.G.players.map((player, pos) => (
-          <img
-            key={pos}
-            src={character}
-            alt="character"
-            className="character"
-            style={{
-              ...this.getPlayerPosition(this.MAP.areas[player.positionOnMap]),
-              ...this.getCharacterSize(),
-            }}
-          />
-        ))}
+        {this.renderPlayers()}
       </div>
     )
   }
