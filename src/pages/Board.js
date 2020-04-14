@@ -123,11 +123,11 @@ export default class GameBoard extends Component {
     return { top: `${area.center[1]}px`, left: `${area.center[0]}px` }
   }
 
-  getPlayerPosition(area) {
+  getPlayerPosition(area, pos, numOccurence) {
     const center = this.computeCenter(area)
     return {
       top: `${center[1] - this.getCharacterSize().heigth / 3}px`,
-      left: `${center[0]}px`,
+      left: `${center[0] - (Math.pow(-1, pos) * (numOccurence - 1) * this.getCharacterSize().width) / 2}px`,
     }
   }
 
@@ -183,19 +183,24 @@ export default class GameBoard extends Component {
     })
   }
 
-  renderPlayers = () =>
-    this.props.G.players.map((player, pos) => (
-      <img
-        key={pos}
-        src={character}
-        alt="character"
-        className="character"
-        style={{
-          ...this.getPlayerPosition(this.MAP.areas[player.positionOnMap]),
-          ...this.getCharacterSize(),
-        }}
-      />
-    ))
+  renderPlayers = () => {
+    const positions = this.props.G.players.map((player) => player.positionOnMap)
+    return this.props.G.players.map((player, pos) => {
+      const numOccurence = positions.filter((v) => v === player.positionOnMap).length
+      return (
+        <img
+          key={pos}
+          src={character}
+          alt="character"
+          className="character"
+          style={{
+            ...this.getPlayerPosition(this.MAP.areas[player.positionOnMap], pos, numOccurence),
+            ...this.getCharacterSize(),
+          }}
+        />
+      )
+    })
+  }
 
   render() {
     return (
