@@ -7,31 +7,42 @@ import tiles from './tiles'
 import swal from 'sweetalert'
 
 export default class GameBoard extends Component {
+  MAP
   areas
+  originalImgHeight = 6476
+  originalImgWidth = 9861
   constructor(props) {
     super(props)
-    this.areas = tiles.graph.vertices.map((vertice) => {
-      return {
-        name: vertice.data.id,
-        shape: 'poly',
-        coords: vertice.data.area,
-        pendingMoveConfirmation: false,
-        selectedDestination: null,
-      }
-    })
-    this.state = { hoveredArea: null, windowWidth: window.innerWidth, pendingConfirm: false }
+    this.MAP = {
+      name: 'my-map',
+      areas: tiles.graph.vertices.map((vertice) => {
+        return {
+          name: vertice.data.id,
+          shape: 'poly',
+          coords: vertice.data.area,
+          pendingMoveConfirmation: false,
+          lastSelected: null,
+        }
+      }),
+    }
+
+    this.state = {
+      hoveredArea: null,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      pendingConfirm: false,
+      path: { steps: [] },
+    }
   }
 
-  handleResize = () => this.setState({ windowWidth: window.innerWidth })
+  handleResize = () =>
+    this.setState({
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+    })
 
   componentDidMount() {
     window.addEventListener('resize', this.handleResize)
-    var c = document.getElementsByTagName('canvas')[0]
-    var ctx = c.getContext('2d')
-    ctx.beginPath()
-    ctx.moveTo(0, 0)
-    ctx.lineTo(1000, 500)
-    ctx.stroke()
   }
 
   componentWillUnmount() {
@@ -42,9 +53,54 @@ export default class GameBoard extends Component {
     this.setState({ hoveredArea: area })
   }
 
+  distance(from, to) {
+    var iDiff = from.data.i - to.data.i
+    var jDiff = from.data.j - to.data.j
+    return Math.sqrt(iDiff * iDiff + jDiff * jDiff)
+  }
+
   clicked(area) {
-    this.selectedDestination = parseInt(area.name)
-    this.setState({ pendingConfirm: true })
+    const to = parseInt(area.name)
+    if (this.lastSelected === to) {
+      this.showPopup()
+    } else if (!this.state.path.steps.some((step) => step.includes(to))) {
+      const from = this.lastSelected || this.props.G.players[this.props.ctx.currentPlayer].positionOnMap
+      const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
+        OUT: {
+          heuristic: function heuristic(n) {
+            return this.distance(n, to)
+          },
+        },
+        IN: {
+          heuristic: function heuristic(n) {
+            return this.distance(n, from)
+          },
+        },
+      })
+      this.lastSelected = to
+      let steps = []
+      const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
+      if (this.state.path.steps.length > 0) {
+        let newTo = newSteps.map((step) => step[1])
+        let oldTo = [this.state.path.steps[0][0]].concat(this.state.path.steps.map((step) => step[1]))
+        let newList = []
+        for (let i = 0; i < oldTo.length && newList.length === 0; i++) {
+          const pos = newTo.indexOf(oldTo[i])
+          if (pos > -1) {
+            newTo = newTo.slice(pos)
+            newList = oldTo.slice(0, i).concat(newTo)
+          }
+          if (newList.length > 0) {
+            steps = []
+            for (let i = 0; i < newList.length - 1; i++) {
+              steps.push([newList[i], newList[i + 1]])
+            }
+          }
+        }
+      }
+      if (steps.length === 0) steps = this.state.path.steps.concat(newSteps)
+      this.setState({ path: { circle: { radius: 10 }, steps } })
+    }
   }
 
   leaveArea() {
@@ -64,26 +120,30 @@ export default class GameBoard extends Component {
   }
 
   getCharacterSize = () => {
+    const scale = (2 * this.state.windowWidth) / this.originalImgWidth
     return {
-      width: (155 * 2 * this.state.windowWidth) / 9861,
-      heigth: (251 * 2 * this.state.windowWidth) / 9861,
+      width: 155 * scale,
+      heigth: 251 * scale,
     }
   }
 
   resetMove = () => {
-    this.setState({ pendingConfirm: false })
-    this.selectedDestination = null
+    this.lastSelected = null
+    this.setState({ path: { steps: [] } })
   }
 
   confirmMove = () => {
-    this.setState({ pendingConfirm: false })
-    this.props.moves.move(this.selectedDestination)
-    this.selectedDestination = null
+    this.props.moves.move(this.lastSelected)
+    this.resetMove()
   }
 
   computeCenter(area) {
     if (!area) return [0, 0]
-    const scaledCoords = area.coords.map((coord) => (coord * this.state.windowWidth) / 9861)
+    const scaledCoords = area.coords.map((coord, index) =>
+      index % 2 === 1
+        ? (coord * this.state.windowHeight) / this.originalImgHeight
+        : (coord * this.state.windowWidth) / this.originalImgWidth
+    )
     // Calculate centroid
     const n = scaledCoords.length / 2
     const { y, x } = scaledCoords.reduce(
@@ -95,73 +155,37 @@ export default class GameBoard extends Component {
     return [x, y]
   }
 
-  drawLine(areaFromId, areaToId) {
-    const areaFrom = this.areas[areaFromId]
-    const areaTo = this.areas[areaToId]
-    const point1 = this.computeCenter(areaFrom)
-    const point2 = this.computeCenter(areaTo)
-    return (
-      <g key={areaToId}>
-        <line
-          strokeDasharray="6,6"
-          x1={point1[0]}
-          y1={point1[1]}
-          x2={point2[0]}
-          y2={point2[1]}
-          className="line"
-        />
-        <circle
-          cx={point2[0]}
-          cy={point2[1]}
-          r={(15 * this.state.windowWidth) / 9861}
-          stroke="red"
-          strokeWidth="3"
-          fill="red"
-        />
-      </g>
-    )
-  }
-
   showPopup = () => {
     swal('Confirm move?', {
       buttons: {
         cancel: 'Cancel',
-        confirm: {
-          text: 'Confirm',
-          confirm: true,
-        },
+        clear: { text: 'Clear', value: 'clear' },
+        confirm: { text: 'Confirm', value: 'confirm' },
       },
     }).then((value) => {
-      console.log('value', value)
-      if (value) {
-        this.confirmMove()
-      } else {
-        this.resetMove()
-      }
+      value === 'confirm' && this.confirmMove()
+      value === 'clear' && this.resetMove()
     })
   }
 
   renderPlayers() {}
 
   render() {
-    const MAP = {
-      name: 'my-map',
-      areas: this.areas,
-    }
-
     return (
       <div className="container">
         <ImageMapper
           src={gameBoard}
-          map={MAP}
+          map={this.MAP}
           width={this.state.windowWidth}
-          imgWidth={9861}
+          imgWidth={this.originalImgWidth}
+          height={this.state.windowHeight}
+          imgHeight={this.originalImgHeight}
           onClick={(area) => this.clicked(area)}
           onMouseEnter={(area) => this.enterArea(area)}
           onMouseLeave={() => this.leaveArea()}
-          // onMouseMove={(area, _, evt) => this.moveOnArea(area, evt)}
-          // onImageClick={(evt) => this.clickedOutside(evt)}
-          // onImageMouseMove={(evt) => this.moveOnImage(evt)}
+          strokeColor="#c49a2d"
+          lineWidth={5}
+          path={this.state.path}
         />
         {this.state.hoveredArea && (
           <span className="tooltip" style={{ ...this.getTipPosition(this.state.hoveredArea) }}>
@@ -175,31 +199,11 @@ export default class GameBoard extends Component {
             alt="character"
             className="character"
             style={{
-              ...this.getPlayerPosition(this.areas[player.positionOnMap]),
+              ...this.getPlayerPosition(this.MAP.areas[player.positionOnMap]),
               ...this.getCharacterSize(),
             }}
           />
         ))}
-        {this.state.pendingConfirm && (
-          <React.Fragment>
-            <svg
-              width={this.state.windowWidth}
-              height={(6476 * this.state.windowWidth) / 9861}
-              className="path">
-              {tiles.dijkstra
-                .shortestPath(
-                  tiles.graph.vertices[
-                    this.props.G.players[this.props.ctx.currentPlayer].positionOnMap
-                  ],
-                  tiles.graph.vertices[this.selectedDestination]
-                )
-                .map((step) =>
-                  this.drawLine(parseInt(step.from.data['id']), parseInt(step.to.data['id']))
-                )}
-            </svg>
-            {this.showPopup()}
-          </React.Fragment>
-        )}
       </div>
     )
   }

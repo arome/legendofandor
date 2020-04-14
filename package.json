@@ -12,7 +12,7 @@
     "react": "^16.13.1",
     "react-awesome-button": "^6.5.1",
     "react-dom": "^16.13.1",
-    "react-image-mapper": "0.0.15",
+    "react-image-mapper": "github:arome/react-image-mapper#dev",
     "react-router-dom": "^5.1.2",
     "react-scripts": "3.4.1",
     "sweetalert": "^2.1.2"
