@@ -1,0 +1,75 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.buttons {
+  display: flex;
+  width: 15%;
+  justify-content: space-evenly;
+  flex-direction: column;
+}
+
+.button-start {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.aws-btn {
+  --button-default-height: 48px;
+  --button-default-font-size: 14px;
+  --button-default-border-radius: 6px;
+  --button-horizontal-padding: 20px;
+  --button-raise-level: 5px;
+  --button-hover-pressure: 2;
+  --transform-speed: 0.185s;
+  --button-primary-color: #c27d04;
+  --button-primary-color-dark: #7b4e02;
+  --button-primary-color-light: #cac4b6;
+  --button-primary-color-hover: transparent;
+  --button-primary-border: 0px solid transparent;
+  --button-secondary-color: #e96d15;
+  --button-secondary-color-dark: #d35026;
+  --button-secondary-color-light: #cac4b6;
+  --button-secondary-color-hover: transparent;
+  --button-secondary-border: 0px solid transparent;
+  --button-anchor-color: #324227;
+  --button-anchor-color-dark: #2d3528;
+  --button-anchor-color-light: #cac4b6;
+  --button-anchor-color-hover: transparent;
+  --button-anchor-border: 1px solid transparent;
+}
