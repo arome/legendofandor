@@ -4,7 +4,7 @@ import gameBoard from '../Andor_Board.jpg'
 import character from '../archer.png'
 import './Board.css'
 import tiles from './tiles'
-import swal from 'sweetalert'
+import Swal from 'sweetalert2'
 
 export default class GameBoard extends Component {
   MAP
@@ -74,42 +74,42 @@ export default class GameBoard extends Component {
         steps = stateSteps.slice(0, areaInPath + 1)
         this.lastSelected = to
       } else {
-      const from = this.lastSelected || this.props.G.players[this.props.ctx.currentPlayer].positionOnMap
+        const from = this.lastSelected || this.props.G.players[this.props.ctx.currentPlayer].positionOnMap
         this.lastSelected = to
-      const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
-        OUT: {
-          heuristic: function heuristic(n) {
-            return this.distance(n, to)
+        const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
+          OUT: {
+            heuristic: function heuristic(n) {
+              return this.distance(n, to)
+            },
           },
-        },
-        IN: {
-          heuristic: function heuristic(n) {
-            return this.distance(n, from)
+          IN: {
+            heuristic: function heuristic(n) {
+              return this.distance(n, from)
+            },
           },
-        },
-      })
-      const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
-      if (this.state.path.steps.length > 0) {
-        let newTo = newSteps.map((step) => step[1])
+        })
+        const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
+        if (this.state.path.steps.length > 0) {
+          let newTo = newSteps.map((step) => step[1])
           let oldTo = [this.props.G.players[this.props.ctx.currentPlayer].positionOnMap].concat(
             this.state.path.steps.map((step) => step[1])
           )
-        let newList = []
-        for (let i = 0; i < oldTo.length && newList.length === 0; i++) {
-          const pos = newTo.indexOf(oldTo[i])
-          if (pos > -1) {
-            newTo = newTo.slice(pos)
-            newList = oldTo.slice(0, i).concat(newTo)
-          }
-          if (newList.length > 0) {
-            steps = []
-            for (let i = 0; i < newList.length - 1; i++) {
-              steps.push([newList[i], newList[i + 1]])
+          let newList = []
+          for (let i = 0; i < oldTo.length && newList.length === 0; i++) {
+            const pos = newTo.indexOf(oldTo[i])
+            if (pos > -1) {
+              newTo = newTo.slice(pos)
+              newList = oldTo.slice(0, i).concat(newTo)
+            }
+            if (newList.length > 0) {
+              steps = []
+              for (let i = 0; i < newList.length - 1; i++) {
+                steps.push([newList[i], newList[i + 1]])
+              }
             }
           }
         }
-      }
-      if (steps.length === 0) steps = this.state.path.steps.concat(newSteps)
+        if (steps.length === 0) steps = this.state.path.steps.concat(newSteps)
       }
       this.setState({ path: { circle: { radius: 10 }, steps } })
     }
@@ -168,15 +168,18 @@ export default class GameBoard extends Component {
   }
 
   showPopup = () => {
-    swal('Confirm move?', {
-      buttons: {
-        cancel: 'Cancel',
-        clear: { text: 'Clear', value: 'clear' },
-        confirm: { text: 'Confirm', value: 'confirm' },
-      },
-    }).then((value) => {
-      value === 'confirm' && this.confirmMove()
-      value === 'clear' && this.resetMove()
+    Swal.fire({
+      title: 'Confirm move?',
+      icon: 'question',
+      showCancelButton: true,
+      showCloseButton: true,
+      cancelButtonText: 'Clear',
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Confirm',
+      reverseButtons: true,
+    }).then((result) => {
+      'value' in result ? this.confirmMove() : result.dismiss === 'cancel' && this.resetMove()
     })
   }
 
