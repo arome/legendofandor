@@ -5,17 +5,13 @@ import GameLOA from '../game'
 import './Lobby.css'
 
 const hostname = window.location.hostname
+const PORT = process.env.PORT || 8000
 const importedGames = [{ game: GameLOA, board: BoardLOA }]
 
 const LobbyView = () => (
   <div>
     <h1>Lobby</h1>
-
-    <Lobby
-      gameServer={`http://${hostname}:8000`}
-      lobbyServer={`http://${hostname}:8000`}
-      gameComponents={importedGames}
-    />
+    <Lobby gameServer={`${hostname}:${PORT}`} lobbyServer={`${hostname}:${PORT}`} gameComponents={importedGames} />
   </div>
 )
 

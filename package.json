@@ -32,7 +32,8 @@
     "utf-8-validate": "^5.0.2"
   },
   "scripts": {
-    "start": "npx concurrently npm:dev:server npm:dev:client",
+    "start": "npm:dev:client",
+    "dev": "npx concurrently npm:dev:server npm:dev:client",
     "dev:client": "react-scripts start",
     "dev:server": "node -r esm server.js",
     "build": "react-scripts build",
