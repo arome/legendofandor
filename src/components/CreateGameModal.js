@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
 import { Modal, Button, Form, Col, Row } from 'react-bootstrap'
 import { useHistory } from 'react-router-dom'
+import './CreateGameModal.css'
 
 const CreateGameModal = (props) => {
   const [name, setName] = useState('')
   const [difficulty, setDifficulty] = useState('easy')
   const [numPlayers, setNumPlayers] = useState(2)
+  const history = useHistory()
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    useHistory.push(`/lobby/${name}`)
+    history.push(`/lobby`)
   }
 
   return (
@@ -34,7 +36,7 @@ const CreateGameModal = (props) => {
             </Col>
           </Form.Group>
           <fieldset>
-            <Form.Group as={Row}>
+            <div>
               <Form.Label as="difficulty" column sm={2}>
                 Difficulty
               </Form.Label>
@@ -54,7 +56,7 @@ const CreateGameModal = (props) => {
                 name="formHorizontalRadios"
                 id="formHorizontalRadios2"
               />
-            </Form.Group>
+            </div>
           </fieldset>
           <Form.Group controlId="exampleForm.ControlSelect1">
             <Form.Label>Number of Players</Form.Label>
@@ -64,15 +66,10 @@ const CreateGameModal = (props) => {
               <option>4</option>
             </Form.Control>
           </Form.Group>
-
-          <Form.Group as={Row}>
-            <Col>
-              <Button type="submit">Create Game</Button>
-            </Col>
-            <Col>
-              <Button type="cancel">Cancel</Button>
-            </Col>
-          </Form.Group>
+          <div className="modal-buttons">
+            <Button type="submit">Create Game</Button>
+            <Button onClick={() => props.handleClose()}>Cancel</Button>
+          </div>
         </Form>
       </Modal.Body>
     </Modal>

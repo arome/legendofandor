@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import ImageMapper from 'react-image-mapper'
-import gameBoard from '../Andor_Board.jpg'
-import character from '../archer.png'
+import gameBoard from '../assets/images/Andor_Board.jpg'
+import character from '../assets/images/archer.png'
 import './Board.css'
 import tiles from './tiles'
 import Swal from 'sweetalert2'
@@ -20,18 +20,13 @@ export default class GameBoard extends Component {
           name: vertice.data.id,
           shape: 'poly',
           coords: vertice.data.area,
-          pendingMoveConfirmation: false,
-          lastSelected: null,
         }
       }),
     }
 
     this.state = {
-      hoveredArea: null,
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
-      pendingConfirm: false,
-      path: { steps: [] },
     }
   }
 
@@ -50,73 +45,42 @@ export default class GameBoard extends Component {
   }
 
   enterArea(area) {
-    this.setState({ hoveredArea: area })
-  }
-
-  distance(from, to) {
-    var iDiff = from.data.i - to.data.i
-    var jDiff = from.data.j - to.data.j
-    return Math.sqrt(iDiff * iDiff + jDiff * jDiff)
+    this.props.moves.setHoveredArea(this.props.playerID, area)
   }
 
   clicked(area) {
     const to = parseInt(area.name)
-    if (this.lastSelected === to) {
-      this.showPopup()
-    } else {
-      let steps = []
-      let stateSteps = this.state.path.steps
-      const areaInPath = stateSteps.findIndex((step) => step.includes(to))
-      if (this.props.G.players[this.props.ctx.currentPlayer].positionOnMap === to) {
-        steps = []
-        this.lastSelected = null
-      } else if (areaInPath > -1) {
-        steps = stateSteps.slice(0, areaInPath + 1)
-        this.lastSelected = to
-      } else {
-        const from = this.lastSelected || this.props.G.players[this.props.ctx.currentPlayer].positionOnMap
-        this.lastSelected = to
-        const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
-          OUT: {
-            heuristic: function heuristic(n) {
-              return this.distance(n, to)
-            },
-          },
-          IN: {
-            heuristic: function heuristic(n) {
-              return this.distance(n, from)
-            },
-          },
+    const myPath = this.props.G.paths[this.props.playerID]
+    const lastSelected = myPath.length > 0 ? myPath[myPath.length - 1][1] : null
+    if (lastSelected === to) {
+      if (this.props.playerID === this.props.ctx.currentPlayer)
+        Swal.fire({
+          title: 'Confirm move?',
+          icon: 'question',
+          showCancelButton: true,
+          showCloseButton: true,
+          cancelButtonText: 'Clear',
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Confirm',
+          reverseButtons: true,
+        }).then((result) => {
+          'value' in result
+            ? this.props.moves.move(to)
+            : result.dismiss === 'cancel' &&
+              this.props.moves.drawPath(
+                this.props.playerID,
+                lastSelected,
+                this.props.G.players[this.props.playerID].positionOnMap
+              )
         })
-        const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
-        if (this.state.path.steps.length > 0) {
-          let newTo = newSteps.map((step) => step[1])
-          let oldTo = [this.props.G.players[this.props.ctx.currentPlayer].positionOnMap].concat(
-            this.state.path.steps.map((step) => step[1])
-          )
-          let newList = []
-          for (let i = 0; i < oldTo.length && newList.length === 0; i++) {
-            const pos = newTo.indexOf(oldTo[i])
-            if (pos > -1) {
-              newTo = newTo.slice(pos)
-              newList = oldTo.slice(0, i).concat(newTo)
-            }
-            if (newList.length > 0) {
-              steps = []
-              for (let i = 0; i < newList.length - 1; i++) {
-                steps.push([newList[i], newList[i + 1]])
-              }
-            }
-          }
-        }
-        if (steps.length === 0) steps = this.state.path.steps.concat(newSteps)
-      }
-      this.setState({ path: { circle: { radius: 10 }, steps } })
+    } else {
+      this.props.moves.drawPath(this.props.playerID, lastSelected, to)
     }
   }
 
   leaveArea() {
-    this.setState({ hoveredArea: null })
+    this.props.moves.setHoveredArea(this.props.playerID, null)
   }
 
   getTipPosition(area) {
@@ -139,16 +103,6 @@ export default class GameBoard extends Component {
     }
   }
 
-  resetMove = () => {
-    this.lastSelected = null
-    this.setState({ path: { steps: [] } })
-  }
-
-  confirmMove = () => {
-    this.props.moves.move(this.lastSelected)
-    this.resetMove()
-  }
-
   computeCenter(area) {
     if (!area) return [0, 0]
     const scaledCoords = area.coords.map((coord, index) =>
@@ -167,20 +121,36 @@ export default class GameBoard extends Component {
     return [x, y]
   }
 
-  showPopup = () => {
-    Swal.fire({
-      title: 'Confirm move?',
-      icon: 'question',
-      showCancelButton: true,
-      showCloseButton: true,
-      cancelButtonText: 'Clear',
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Confirm',
-      reverseButtons: true,
-    }).then((result) => {
-      'value' in result ? this.confirmMove() : result.dismiss === 'cancel' && this.resetMove()
+  getPaths(colors) {
+    const pathsLength = this.props.G.paths.length
+    const paths = []
+    for (let i = 0; i < pathsLength; i++)
+      if (i !== parseInt(this.props.playerID))
+        paths.push({
+          circle: { color: colors[i], radius: 10 },
+          line: { color: colors[i] },
+          steps: this.props.G.paths[i],
+        })
+    paths.push({
+      circle: { color: colors[this.props.playerID], radius: 10 },
+      line: { color: colors[this.props.playerID] },
+      steps: this.props.G.paths[this.props.playerID],
     })
+    return paths
+  }
+
+  getHoveredAreas(colors) {
+    const hoveredAreasLength = this.props.G.hoveredAreas.length
+    const hoveredAreas = []
+    for (let i = 0; i < hoveredAreasLength; i++) {
+      const hoveredArea = this.props.G.hoveredAreas[i]
+      if (i !== parseInt(this.props.playerID) && hoveredArea)
+        hoveredAreas.push({ ...hoveredArea, strokeColor: colors[i], _id: i })
+    }
+    const myHoveredArea = this.props.G.hoveredAreas[this.props.playerID]
+    myHoveredArea &&
+      hoveredAreas.push({ ...myHoveredArea, strokeColor: colors[this.props.playerID], _id: this.props.playerID })
+    return hoveredAreas
   }
 
   renderPlayers = () => {
@@ -203,6 +173,7 @@ export default class GameBoard extends Component {
   }
 
   render() {
+    const colors = ['red', 'blue', 'green', 'yellow']
     return (
       <div className="container">
         <ImageMapper
@@ -215,9 +186,10 @@ export default class GameBoard extends Component {
           onClick={(area) => this.clicked(area)}
           onMouseEnter={(area) => this.enterArea(area)}
           onMouseLeave={() => this.leaveArea()}
-          strokeColor="#c49a2d"
+          strokeColor={colors[this.props.playerID]}
           lineWidth={5}
-          path={this.state.path}
+          hoveredAreas={this.getHoveredAreas(colors)}
+          paths={this.getPaths(colors)}
         />
         {this.state.hoveredArea && (
           <span className="tooltip" style={{ ...this.getTipPosition(this.state.hoveredArea) }}>

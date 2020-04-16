@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import logo from '../logo.svg'
+import logo from '../assets/images/LOA_icon.png'
 import { AwesomeButton } from 'react-awesome-button'
 import styles from 'react-awesome-button/src/styles/themes/theme-blue'
 import './StartMenu.css'
@@ -15,7 +15,11 @@ function StartMenu() {
     <div>
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
-        <p>Welcome to the game Legend of Andor</p>
+        <h1>
+          Welcome to the
+          <br />
+          Legend of Andor
+        </h1>
         <div className="buttons">
           <AwesomeButton onPress={handleShow} className="button-start" cssmodule={styles} type="primary">
             Create Game
