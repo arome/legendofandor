@@ -14,6 +14,13 @@ const divStyle = {
   backgroundSize: '100% 100%',
 }
 
+document.oncontextmenu = function (e) {
+  if (e.button == 2) {
+    e.preventDefault()
+    return false
+  }
+}
+
 ReactDOM.render(
   <div style={divStyle}>
     <App />
