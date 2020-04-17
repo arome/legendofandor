@@ -4,20 +4,13 @@ import { default as BoardLOA } from './Board'
 import GameLOA from '../game'
 import './Lobby.css'
 
-const hostname = window.location.hostname
-const PORT = process.env.PORT || 8000
-
-const url =
-  !process.env.NODE_ENV || process.env.NODE_ENV === 'development'
-    ? `http://${hostname}:${PORT}`
-    : `https://${hostname}:${PORT}`
-console.log('url', url)
+const api = 'https://legendofandor.herokuapp.com'
 const importedGames = [{ game: GameLOA, board: BoardLOA }]
 
 const LobbyView = () => (
   <div>
     <h1>Lobby</h1>
-    <Lobby gameServer={url} lobbyServer={url} gameComponents={importedGames} />
+    <Lobby gameServer={api} lobbyServer={api} gameComponents={importedGames} />
   </div>
 )
 
