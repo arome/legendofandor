@@ -27,6 +27,8 @@ const LegendOfAndor = {
         willpower: 7,
         rank: 7,
         positionOnMap: 0,
+        hoveredArea: null,
+        path: [],
       },
       {
         health: 10,
@@ -38,10 +40,10 @@ const LegendOfAndor = {
         willpower: 7,
         rank: 7,
         positionOnMap: 0,
+        hoveredArea: null,
+        path: [],
       },
     ],
-    paths: [[], [], [], []],
-    hoveredAreas: [null, null, null, null],
     letter: 'A',
   }),
 
@@ -49,51 +51,52 @@ const LegendOfAndor = {
     move(G, ctx, id) {
       G.players[ctx.currentPlayer].positionOnMap = id
       G.hoursPassed++
-      G.paths = [[], [], [], []]
+      G.players.map((player) => (player.path = []))
       ctx.events.endTurn()
     },
     fight(G, ctx, id) {},
     drawPath: {
       move: (G, ctx, player, from, to) => {
         let steps = []
-        const { paths, players } = G
+        const { players } = G
         const startingPosition = players[ctx.currentPlayer].positionOnMap
-        const areaInPath = paths[player].findIndex((step) => step.includes(to))
-        if (to !== startingPosition) {
-          if (areaInPath > -1)
-            // Player clicked on an area already in path, remove path after it
-            steps = paths[player].slice(0, areaInPath + 1)
-          else {
-            // Player clicked on a new area, extend path
-            from = from || startingPosition
-            const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
-              OUT: { heuristic: (n) => distance(n, to) },
-              IN: { heuristic: (n) => distance(n, from) },
-            })
-            const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
-            if (paths[player].length > 0) {
-              // If there was already a path drawn
-              const oldTo = [startingPosition].concat(paths[player].map((step) => step[1]))
-              const newTo = newSteps.map((step) => step[1])
-              let newToList = []
-              for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
-                // If new path crosses existing path, replace where it crosses
-                const pos = newTo.indexOf(oldTo[i])
-                if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
-              }
-              if (newToList.length > 0)
-                for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
+        const areaInPath = players[player].path.findIndex((step) => step.includes(to))
+        if (to === startingPosition)
+          // Player clicked on starting position
+          to = null
+        else if (areaInPath > -1)
+          // Player clicked on an area already in path, remove path after it
+          steps = players[player].path.slice(0, areaInPath + 1)
+        else {
+          // Player clicked on a new area, extend path
+          from = from || startingPosition
+          const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
+            OUT: { heuristic: (n) => distance(n, to) },
+            IN: { heuristic: (n) => distance(n, from) },
+          })
+          const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
+          if (players[player].path.length > 0) {
+            // If there was already a path drawn
+            const oldTo = [startingPosition].concat(players[player].path.map((step) => step[1]))
+            const newTo = newSteps.map((step) => step[1])
+            let newToList = []
+            for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
+              // If new path crosses existing path, replace where it crosses
+              const pos = newTo.indexOf(oldTo[i])
+              if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
             }
-            if (steps.length === 0) steps = paths[player].concat(newSteps)
+            if (newToList.length > 0)
+              for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
           }
+          if (steps.length === 0) steps = players[player].path.concat(newSteps)
         }
-        G.paths[player] = steps
+        G.players[player].path = steps
       },
       redact: true,
     },
     setHoveredArea: {
       move: (G, ctx, playerID, area) => {
-        G.hoveredAreas[playerID] = area
+        G.players[playerID].hoveredArea = area
       },
       redact: true,
     },
@@ -106,17 +109,16 @@ const LegendOfAndor = {
         moves: {
           drawPath: {
             move: (G, ctx, player, from, to) => {
-              console.log('from,to', from, to)
               let steps = []
-              const { paths, players } = G
+              const { players } = G
               const startingPosition = players[ctx.currentPlayer].positionOnMap
-              const areaInPath = paths[player].findIndex((step) => step.includes(to))
+              const areaInPath = players[player].path.findIndex((step) => step.includes(to))
               if (to === startingPosition)
                 // Player clicked on starting position
                 to = null
               else if (areaInPath > -1)
                 // Player clicked on an area already in path, remove path after it
-                steps = paths[player].slice(0, areaInPath + 1)
+                steps = players[player].path.slice(0, areaInPath + 1)
               else {
                 // Player clicked on a new area, extend path
                 from = from || startingPosition
@@ -125,9 +127,9 @@ const LegendOfAndor = {
                   IN: { heuristic: (n) => distance(n, from) },
                 })
                 const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
-                if (paths[player].length > 0) {
+                if (players[player].path.length > 0) {
                   // If there was already a path drawn
-                  const oldTo = [startingPosition].concat(paths[player].map((step) => step[1]))
+                  const oldTo = [startingPosition].concat(players[player].path.map((step) => step[1]))
                   const newTo = newSteps.map((step) => step[1])
                   let newToList = []
                   for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
@@ -138,14 +140,14 @@ const LegendOfAndor = {
                   if (newToList.length > 0)
                     for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
                 }
-                if (steps.length === 0) steps = paths[player].concat(newSteps)
+                if (steps.length === 0) steps = players[player].path.concat(newSteps)
               }
-              G.paths[player] = steps
+              G.players[player].path = steps
             },
             redact: true,
           },
           setHoveredArea: {
-            move: (G, playerID, area) => (G.hoveredAreas[playerID] = area),
+            move: (G, playerID, area) => (G.players[playerID].hoveredArea = area),
           },
         },
       },

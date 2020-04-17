@@ -50,7 +50,7 @@ export default class GameBoard extends Component {
 
   clicked(area) {
     const to = parseInt(area.name)
-    const myPath = this.props.G.paths[this.props.playerID]
+    const myPath = this.props.G.players[this.props.playerID].path
     const lastSelected = myPath.length > 0 ? myPath[myPath.length - 1][1] : null
     if (lastSelected === to) {
       if (this.props.playerID === this.props.ctx.currentPlayer)
@@ -122,32 +122,32 @@ export default class GameBoard extends Component {
   }
 
   getPaths(colors) {
-    const pathsLength = this.props.G.paths.length
+    const numPlayers = this.props.G.players.length
     const paths = []
-    for (let i = 0; i < pathsLength; i++)
+    for (let i = 0; i < numPlayers; i++)
       if (i !== parseInt(this.props.playerID))
         paths.push({
           circle: { color: colors[i], radius: 10 },
           line: { color: colors[i] },
-          steps: this.props.G.paths[i],
+          steps: this.props.G.players[i].path,
         })
     paths.push({
       circle: { color: colors[this.props.playerID], radius: 10 },
       line: { color: colors[this.props.playerID] },
-      steps: this.props.G.paths[this.props.playerID],
+      steps: this.props.G.players[this.props.playerID].path,
     })
     return paths
   }
 
   getHoveredAreas(colors) {
-    const hoveredAreasLength = this.props.G.hoveredAreas.length
+    const numPlayers = this.props.G.players.length
     const hoveredAreas = []
-    for (let i = 0; i < hoveredAreasLength; i++) {
-      const hoveredArea = this.props.G.hoveredAreas[i]
+    for (let i = 0; i < numPlayers; i++) {
+      const hoveredArea = this.props.G.players[i].hoveredArea
       if (i !== parseInt(this.props.playerID) && hoveredArea)
         hoveredAreas.push({ ...hoveredArea, strokeColor: colors[i], _id: i })
     }
-    const myHoveredArea = this.props.G.hoveredAreas[this.props.playerID]
+    const myHoveredArea = this.props.G.players[this.props.playerID].hoveredArea
     myHoveredArea &&
       hoveredAreas.push({ ...myHoveredArea, strokeColor: colors[this.props.playerID], _id: this.props.playerID })
     return hoveredAreas
