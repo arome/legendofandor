@@ -33,7 +33,7 @@
     "utf-8-validate": "^5.0.2"
   },
   "scripts": {
-    "start": "node -r esm server.js && react-scripts start",
+    "start": "npm run dev",
     "dev": "npx concurrently npm:dev:server npm:dev:client",
     "dev:client": "cross-env NODE_ENV=development react-scripts start",
     "dev:server": "node -r esm server.js",
