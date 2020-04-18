@@ -6,7 +6,9 @@ import Board from './Board'
 import logger from 'redux-logger'
 import { applyMiddleware } from 'redux'
 
-const server = 'https://legendofandor.herokuapp.com/'
+const hostname = window.location.hostname
+const PORT = process.env.PORT || 8000
+const server = `http${hostname === 'localhost' ? '' : 's'}://${hostname}:${PORT}`
 
 export default Client({
   game: LegendOfAndor,
