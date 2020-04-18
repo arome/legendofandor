@@ -6,13 +6,13 @@ import './Lobby.css'
 
 const hostname = window.location.hostname
 const PORT = process.env.PORT || 8000
-const url = hostname === 'localhost' ? `http://${hostname}:${PORT}` : `https://${hostname}`
+const server = hostname === 'localhost' ? `http://${hostname}:${PORT}` : `https://${hostname}`
 const importedGames = [{ game: GameLOA, board: BoardLOA }]
 
 const LobbyView = () => (
   <div>
     <h1>Lobby</h1>
-    <Lobby gameServer={url} lobbyServer={url} gameComponents={importedGames} />
+    <Lobby gameServer={server} lobbyServer={server} gameComponents={importedGames} />
   </div>
 )
 

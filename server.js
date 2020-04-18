@@ -13,7 +13,6 @@ const static_pages = new Koa()
 static_pages.use(serve(FRONTEND_APP_BUILD_PATH)) //serve the build directory
 server.app.use(mount('/', static_pages)) //serve the build directory
 server.run(PORT, () => {
-  console.log(`Serving at: http://localhost:${PORT}/`)
   server.app.use(
     async (ctx, next) => await serve(FRONTEND_APP_BUILD_PATH)(Object.assign(ctx, { path: 'index.html' }), next)
   )
