@@ -6,12 +6,7 @@ import './Lobby.css'
 
 const hostname = window.location.hostname
 const PORT = process.env.PORT || 8000
-
-const url =
-  !process.env.NODE_ENV || process.env.NODE_ENV === 'development'
-    ? `http://${hostname}:${PORT}`
-    : `https://${hostname}:${PORT}`
-console.log('url', url)
+const url = `http${hostname === 'localhost' ? '' : 's'}://${hostname}:${PORT}`
 const importedGames = [{ game: GameLOA, board: BoardLOA }]
 
 const LobbyView = () => (
