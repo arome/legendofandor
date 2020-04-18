@@ -8,7 +8,7 @@ import { applyMiddleware } from 'redux'
 
 const hostname = window.location.hostname
 const PORT = process.env.PORT || 8000
-const server = `http${hostname === 'localhost' ? '' : 's'}://${hostname}:${PORT}`
+const server = hostname === 'localhost' ? `http://${hostname}:${PORT}` : `https://${hostname}`
 
 export default Client({
   game: LegendOfAndor,
