@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { Modal, Button, Form, Col, Row } from 'react-bootstrap'
 import { useHistory } from 'react-router-dom'
-import './CreateGameModal.css'
+import { Form, Modal } from 'semantic-ui-react'
+import './CreateGameModal.scss'
 
 const CreateGameModal = (props) => {
   const [name, setName] = useState('')
@@ -11,67 +11,59 @@ const CreateGameModal = (props) => {
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    history.push(`/lobby`)
+    const valid = name.length > 0
+    if (valid) {
+      // call api
+      // history.push(`/lobby`)
+    }
   }
 
   return (
-    <Modal show={props.show} onHide={props.handleClose} backdrop="static" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>Modal heading</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
+    <Modal className="create-game-modal" open={props.open} onClose={() => props.handleClose()} closeIcon>
+      <Modal.Header>Create a New Game</Modal.Header>
+      <Modal.Content>
         <Form onSubmit={handleSubmit}>
-          <Form.Group as={Row} controlId="formHorizontalEmail">
-            <Form.Label column sm={2}>
-              Name
-            </Form.Label>
-            <Col sm={10}>
-              <Form.Control
-                type="text"
-                placeholder="Game Name"
-                onChange={(e) => {
-                  setName(e.target.value)
-                }}
-              />
-            </Col>
+          <Form.Input
+            fluid
+            label="Game name"
+            placeholder="Type your text here..."
+            onChange={(e) => setName(e.target.value)}
+            icon="game"
+            iconPosition="left"
+          />
+
+          <Form.Select
+            defaultValue={numPlayers}
+            onChange={(d, e) => setNumPlayers(e.value)}
+            fluid
+            label="# of Players"
+            options={[
+              { key: '2', text: '2', value: 2 },
+              { key: '3', text: '3', value: 3 },
+              { key: '4', text: '4', value: 4 },
+            ]}
+            placeholder="How many players?"
+          />
+          <Form.Group inline>
+            <label>Difficulty</label>
+            <Form.Radio
+              label="Easy"
+              value="easy"
+              checked={difficulty === 'easy'}
+              onChange={(e) => setDifficulty('easy')}
+            />
+            <Form.Radio
+              label="Hard"
+              value="hard"
+              checked={difficulty === 'hard'}
+              onChange={(e) => setDifficulty('hard')}
+            />
           </Form.Group>
-          <fieldset>
-            <div>
-              <Form.Label as="difficulty" column sm={2}>
-                Difficulty
-              </Form.Label>
-              <Form.Check
-                type="radio"
-                label="Easy"
-                checked={difficulty === 'easy'}
-                onChange={() => setDifficulty('easy')}
-                name="formHorizontalRadios"
-                id="formHorizontalRadios1"
-              />
-              <Form.Check
-                type="radio"
-                label="Hard"
-                checked={difficulty === 'hard'}
-                onChange={() => setDifficulty('hard')}
-                name="formHorizontalRadios"
-                id="formHorizontalRadios2"
-              />
-            </div>
-          </fieldset>
-          <Form.Group controlId="exampleForm.ControlSelect1">
-            <Form.Label>Number of Players</Form.Label>
-            <Form.Control as="select" onChange={(e) => setNumPlayers(e.target.value)}>
-              <option>2</option>
-              <option>3</option>
-              <option>4</option>
-            </Form.Control>
+          <Form.Group>
+            <Form.Button>Create Game</Form.Button>
           </Form.Group>
-          <div className="modal-buttons">
-            <Button type="submit">Create Game</Button>
-            <Button onClick={() => props.handleClose()}>Cancel</Button>
-          </div>
         </Form>
-      </Modal.Body>
+      </Modal.Content>
     </Modal>
   )
 }
