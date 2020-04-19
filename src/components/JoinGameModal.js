@@ -20,7 +20,7 @@ const CreateGameModal = (props) => {
           <Form.Input
             fluid
             label="Game name"
-            placeholder="Type your text here..."
+            placeholder="Enter the game name here..."
             onChange={(e) => setName(e.target.value)}
             icon="game"
             iconPosition="left"
