@@ -1,5 +1,21 @@
 import tiles from './pages/tiles'
 import { Stage } from 'boardgame.io/core'
+import { PluginPlayer } from 'boardgame.io/plugins'
+
+// define a function to initialize each player’s state
+const playerSetup = (playerID) => ({
+  health: 10,
+  attack: 10,
+  move: 1,
+  nbOfDice: 2,
+  specialAbility: 'none',
+  strength: 1,
+  willpower: 7,
+  rank: 7,
+  positionOnMap: 0,
+  hoveredArea: null,
+  path: [],
+})
 
 function distance(from, to) {
   var iDiff = from.data.i - to.data.i
@@ -74,6 +90,7 @@ const LegendOfAndor = {
             OUT: { heuristic: (n) => distance(n, to) },
             IN: { heuristic: (n) => distance(n, from) },
           })
+          if (path) {
           const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
           if (players[player].path.length > 0) {
             // If there was already a path drawn
@@ -89,6 +106,9 @@ const LegendOfAndor = {
               for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
           }
           if (steps.length === 0) steps = players[player].path.concat(newSteps)
+          } else {
+            steps = G.players[player].path
+          }
         }
         G.players[player].path = steps
       },
@@ -174,6 +194,10 @@ const LegendOfAndor = {
       return moves
     },
   },
+
+  plugins: [
+    PluginPlayer({ setup: playerSetup }),
+  ],
 }
 
 export default LegendOfAndor

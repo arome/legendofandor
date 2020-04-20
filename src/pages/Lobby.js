@@ -91,7 +91,7 @@ export default () => {
     return () => {
       clearInterval(interval)
     }
-  }, [])
+  }, [gameID])
 
   const divStyle = {
     width: '100vw',

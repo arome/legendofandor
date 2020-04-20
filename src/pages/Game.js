@@ -7,10 +7,15 @@ class Game extends Component {
     this.state = props.location.state
   }
   render() {
-    const { playerID, playerCredentials, gameID } = this.state
+    const { playerID, playerCredentials, gameID, numPlayers } = this.state
     return (
       <div>
-        <BoardGameClient playerID={playerID.toString()} credentials={playerCredentials} gameID={gameID} />
+        <BoardGameClient
+          playerID={playerID.toString()}
+          credentials={playerCredentials}
+          gameID={gameID}
+          numPlayers={numPlayers}
+        />
       </div>
     )
   }
