@@ -4,10 +4,9 @@ import Axios from 'axios'
 import { server, name } from '../common'
 import { useParams } from 'react-router-dom'
 import './Lobby.scss'
-import { AwesomeButton } from 'react-awesome-button'
-import styles from 'react-awesome-button/src/styles/themes/theme-amber'
-import { Form, Button } from 'semantic-ui-react'
-import character from '../assets/images/characters/pictures/no_character.png'
+import { Button } from 'semantic-ui-react'
+import PlayerNameModal from '../modals/PlayerNameModal'
+import character from '../assets/images/characters/pictures/Warrior_male.jpg'
 
 export default () => {
   const { gameID } = useParams()
@@ -16,6 +15,8 @@ export default () => {
   const [playerCredentials, setPlayerCredentials] = useState('')
   const [setupData, setSetupData] = useState({})
   const [error, setError] = useState(false)
+  const [openPlayerName, setOpenPlayerName] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState(null)
 
   const handleSubmit = (playerID) => (event) => {
     event.preventDefault()
@@ -25,7 +26,15 @@ export default () => {
     !error && joinGame(playerID, playerName)
   }
 
+  const handleClosePlayerName = () => setOpenPlayerName(false)
+
+  const getPlayerName = (playerID) => {
+    setSelectedPlayer(playerID)
+    setOpenPlayerName(true)
+  }
+
   const joinGame = (playerID, playerName) => {
+    setOpenPlayerName(false)
     Axios.post(`${server}/games/${name}/${gameID}/join`, { playerID, playerName }).then((res) => {
       const playerCredentials = res.data
       setPlayerCredentials(playerCredentials)
@@ -46,35 +55,7 @@ export default () => {
     backgroundSize: '100% 100%',
   }
 
-  const characterSelection = (playerID) => {
-    
-  }
-
-  const viewWhenJoined = (player) => (
-    <h2>
-      Player {player.name} joined as player {player.id + 1}
-    </h2>
-  )
-
-  const viewWhenNotJoined = (player) => (
-    <Form onSubmit={handleSubmit(player.id)}>
-      <Form.Input
-        className="input-player"
-        fluid
-        error={error}
-        label={`Player ${player.id + 1} name`}
-        placeholder="Enter the your name here..."
-        onChange={(e) => {
-          const newPlayerNames = playerNames
-          newPlayerNames[player.id] = e.target.value
-          setPlayerNames(newPlayerNames)
-        }}
-        icon="user"
-        iconPosition="left"
-        action={`Join as player ${player.id + 1}`}
-      />
-    </Form>
-  )
+  const characterSelection = (playerID) => {}
 
   return (
     <div className="lobby" style={divStyle}>
@@ -83,17 +64,33 @@ export default () => {
       </div>
       <div className="content">
         <div className="players">
-          {players.map((player, key) => (
-            <div className="player" key={key}>
-              <div style={{ display: 'block', position: 'relative' }}>
-                <img className="character-image" alt="character" src={character}></img>
-                <Button onClick={() => characterSelection(player.id)}>Choose Character</Button>
+          {players.map((player, key) => {
+            console.log('player', player)
+
+            return (
+              <div className="player" key={key}>
+                <div style={{ display: 'block', position: 'relative' }}>
+                  <img className="character-image" alt="character" src={character}></img>
+                  {'name' in player && <Button onClick={() => characterSelection(player.id)}>Choose Character</Button>}
+                </div>
+                {'name' in player ? (
+                  <h3>{player.name}</h3>
+                ) : (
+                  <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(player.id)}>
+                    Join as player {player.id + 1}
+                  </Button>
+                )}
               </div>
-              <Button style={{ marginTop: '15px' }}>Join as player {player.id + 1}</Button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
+      <PlayerNameModal
+        open={openPlayerName}
+        handleClose={handleClosePlayerName}
+        playerID={selectedPlayer}
+        joinGame={joinGame}
+      />
     </div>
   )
 }
