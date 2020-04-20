@@ -28,7 +28,8 @@ const LegendOfAndor = {
   minPlayers: 2,
   maxPlayers: 4,
 
-  setup: () => ({
+  setup: (ctx, setupData) => ({
+    difficulty: setupData && setupData.difficulty,
     hoursPassed: 0,
     round: 0,
     legend: 1,
@@ -72,7 +73,8 @@ const LegendOfAndor = {
     },
     fight(G, ctx, id) {},
     drawPath: {
-      move: (G, ctx, player, from, to) => {
+      move: (G, ctx, from, to) => {
+        const player = ctx.playerID
         let steps = []
         const { players } = G
         const startingPosition = players[ctx.currentPlayer].positionOnMap
@@ -86,26 +88,34 @@ const LegendOfAndor = {
         else {
           // Player clicked on a new area, extend path
           from = from || startingPosition
-          const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
-            OUT: { heuristic: (n) => distance(n, to) },
-            IN: { heuristic: (n) => distance(n, from) },
-          })
-          if (path) {
-          const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
-          if (players[player].path.length > 0) {
-            // If there was already a path drawn
-            const oldTo = [startingPosition].concat(players[player].path.map((step) => step[1]))
-            const newTo = newSteps.map((step) => step[1])
-            let newToList = []
-            for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
-              // If new path crosses existing path, replace where it crosses
-              const pos = newTo.indexOf(oldTo[i])
-              if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
+          const path = tiles.dijkstra.shortestPath(
+            tiles.graph.vertices[from],
+            tiles.graph.vertices[to],
+            {
+              OUT: { heuristic: (n) => distance(n, to) },
+              IN: { heuristic: (n) => distance(n, from) },
             }
-            if (newToList.length > 0)
-              for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
-          }
-          if (steps.length === 0) steps = players[player].path.concat(newSteps)
+          )
+          if (path) {
+            const newSteps = path.map((step) => [
+              parseInt(step.from.data.id),
+              parseInt(step.to.data.id),
+            ])
+            if (players[player].path.length > 0) {
+              // If there was already a path drawn
+              const oldTo = [startingPosition].concat(players[player].path.map((step) => step[1]))
+              const newTo = newSteps.map((step) => step[1])
+              let newToList = []
+              for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
+                // If new path crosses existing path, replace where it crosses
+                const pos = newTo.indexOf(oldTo[i])
+                if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
+              }
+              if (newToList.length > 0)
+                for (let i = 0; i < newToList.length - 1; i++)
+                  steps.push([newToList[i], newToList[i + 1]])
+            }
+            if (steps.length === 0) steps = players[player].path.concat(newSteps)
           } else {
             steps = G.players[player].path
           }
@@ -115,8 +125,8 @@ const LegendOfAndor = {
       redact: true,
     },
     setHoveredArea: {
-      move: (G, ctx, playerID, area) => {
-        G.players[playerID].hoveredArea = area
+      move: (G, ctx, area) => {
+        G.players[ctx.playerID].hoveredArea = area
       },
       redact: true,
     },
@@ -128,8 +138,9 @@ const LegendOfAndor = {
       drawPath: {
         moves: {
           drawPath: {
-            move: (G, ctx, player, from, to) => {
+            move: (G, ctx, from, to) => {
               let steps = []
+              const player = ctx.playerID
               const { players } = G
               const startingPosition = players[ctx.currentPlayer].positionOnMap
               const areaInPath = players[player].path.findIndex((step) => step.includes(to))
@@ -142,32 +153,46 @@ const LegendOfAndor = {
               else {
                 // Player clicked on a new area, extend path
                 from = from || startingPosition
-                const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
-                  OUT: { heuristic: (n) => distance(n, to) },
-                  IN: { heuristic: (n) => distance(n, from) },
-                })
-                const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
-                if (players[player].path.length > 0) {
-                  // If there was already a path drawn
-                  const oldTo = [startingPosition].concat(players[player].path.map((step) => step[1]))
-                  const newTo = newSteps.map((step) => step[1])
-                  let newToList = []
-                  for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
-                    // If new path crosses existing path, replace where it crosses
-                    const pos = newTo.indexOf(oldTo[i])
-                    if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
+                const path = tiles.dijkstra.shortestPath(
+                  tiles.graph.vertices[from],
+                  tiles.graph.vertices[to],
+                  {
+                    OUT: { heuristic: (n) => distance(n, to) },
+                    IN: { heuristic: (n) => distance(n, from) },
                   }
-                  if (newToList.length > 0)
-                    for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
+                )
+                if (path) {
+                  const newSteps = path.map((step) => [
+                    parseInt(step.from.data.id),
+                    parseInt(step.to.data.id),
+                  ])
+                  if (players[player].path.length > 0) {
+                    // If there was already a path drawn
+                    const oldTo = [startingPosition].concat(
+                      players[player].path.map((step) => step[1])
+                    )
+                    const newTo = newSteps.map((step) => step[1])
+                    let newToList = []
+                    for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
+                      // If new path crosses existing path, replace where it crosses
+                      const pos = newTo.indexOf(oldTo[i])
+                      if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
+                    }
+                    if (newToList.length > 0)
+                      for (let i = 0; i < newToList.length - 1; i++)
+                        steps.push([newToList[i], newToList[i + 1]])
+                  }
+                  if (steps.length === 0) steps = players[player].path.concat(newSteps)
+                } else {
+                  steps = G.players[player].path
                 }
-                if (steps.length === 0) steps = players[player].path.concat(newSteps)
               }
               G.players[player].path = steps
             },
             redact: true,
           },
           setHoveredArea: {
-            move: (G, playerID, area) => (G.players[playerID].hoveredArea = area),
+            move: (G, ctx, area) => (G.players[ctx.playerID].hoveredArea = area),
           },
         },
       },
@@ -178,26 +203,16 @@ const LegendOfAndor = {
     if (G.letter === 'N') {
       return { winner: ctx.currentPlayer }
     }
-    // if (G.cells.filter((c) => c === null).length === 0) {
-    //   return { draw: true }
-    // }
   },
 
   ai: {
     enumerate: (G) => {
       let moves = []
-      // for (let i = 0; i < 9; i++) {
-      //   if (G.cells[i] === null) {
-      //     moves.push({ move: 'clickCell', args: [i] })
-      //   }
-      // }
       return moves
     },
   },
 
-  plugins: [
-    PluginPlayer({ setup: playerSetup }),
-  ],
+  plugins: [PluginPlayer({ setup: playerSetup })],
 }
 
 export default LegendOfAndor

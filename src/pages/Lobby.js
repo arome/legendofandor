@@ -16,12 +16,11 @@ export default () => {
   const [playerName, setPlayerName] = useState('')
   const [playerID, setPlayerID] = useState(null)
   const [players, setPlayers] = useState([])
-  const [playerCredentials, setPlayerCredentials] = useState('')
+  const [credentials, setCredentials] = useState('')
   const [setupData, setSetupData] = useState({})
   const [openPlayerName, setOpenPlayerName] = useState(false)
   const [openHeroSelection, setOpenHeroSelection] = useState(false)
   const [selectedHero, setSelectedHero] = useState(null)
-  const [cookie, setCookie] = useState({})
 
   const handleClosePlayerName = () => {
     setOpenPlayerName(false)
@@ -37,53 +36,42 @@ export default () => {
     setOpenPlayerName(true)
   }
 
-  const updateCookie = () => {
-    let newCookie = cookie
-    newCookie[gameID] = {
-      selectedHero,
-      playerID,
-      playerName,
-      playerCredentials,
-    }
-    setCookie(newCookie)
-    Cookies.save('lobby', cookie, { path: '/' })
+  const updateCookie = (fieldsToUpdate) => {
+    let newCookie = Cookies.load('lobby') || {}
+    if (!(gameID in newCookie)) newCookie[gameID] = {}
+    for (const key in fieldsToUpdate) newCookie[gameID][key] = fieldsToUpdate[key]
+    Cookies.save('lobby', newCookie, { path: '/' })
   }
 
   const joinGame = (playerID, playerName) => {
     setOpenPlayerName(false)
 
     Axios.post(`${server}/games/${name}/${gameID}/join`, { playerID, playerName }).then((res) => {
-      const playerCredentials = res.data.playerCredentials
-      setPlayerCredentials(playerCredentials)
-      setPlayerName(playerName)
-      updateCookie()
+      const credentials = res.data.playerCredentials
+      setCredentials(credentials)
+      updateCookie({ credentials, playerID })
     })
   }
 
-  const updateHero = (hero) => {
-    setSelectedHero(hero)
-    let newCookie = cookie
-    newCookie[gameID] = {
-      selectedHero: hero,
-      playerID,
-      playerName,
-      playerCredentials,
-    }
-    setCookie(newCookie)
-    Cookies.save('lobby', cookie, { path: '/' })
+  const updateHero = (newHero) => {
+    Axios.post(`${server}/games/${name}/${gameID}/setHero`, { playerID, credentials, newHero })
+      .then(() => {
+        setSelectedHero(newHero)
+        updateCookie({ newHero })
+      })
+      .catch((e) => console.log('error', e))
   }
 
   useEffect(() => {
     const browserCookie = Cookies.load('lobby') || {}
-    setCookie(browserCookie)
     if (gameID in browserCookie) {
       setPlayerName(browserCookie[gameID].playerName)
-      setPlayerCredentials(browserCookie[gameID].playerCredentials)
-      setSelectedHero(browserCookie[gameID].selectedHero)
+      setCredentials(browserCookie[gameID].credentials)
+      setSelectedHero(browserCookie[gameID].newHero)
       setPlayerID(browserCookie[gameID].playerID)
     }
     const interval = setInterval(() => {
-      Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
+      Axios.get(`${server}/games/${name}/${gameID}/moreData`).then((res) => {
         setPlayers(res.data.players)
         setSetupData(res.data.setupData)
       })
@@ -109,10 +97,7 @@ export default () => {
         <div className="players">
           {players.map((player, key) => {
             const characterImage =
-              selectedHero && player.id === playerID
-                ? require(`../assets/images/characters/pictures/${selectedHero}.jpg`)
-                : character
-
+              'hero' in player ? require(`../assets/images/characters/pictures/${player.hero}.jpg`) : character
             return (
               <div className="player" key={key}>
                 <div style={{ display: 'block', position: 'relative' }}>
@@ -138,7 +123,13 @@ export default () => {
           <Button
             className="start-game-button"
             onClick={() =>
-              history.push('/start-game', { playerID, gameID, playerCredentials, numPlayers: players.length })
+              history.push('/start-game', {
+                playerID,
+                gameID,
+                credentials,
+                numPlayers: players.length,
+                selectedHero,
+              })
             }
           >
             Start Game

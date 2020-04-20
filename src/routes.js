@@ -1,12 +1,12 @@
 import React from 'react'
 import Lobby from './pages/Lobby'
 import TestLobby from './pages/TestLobby'
-import Game from './pages/Game'
 import StartMenu from './pages/StartMenu'
 import { Switch, Route } from 'react-router-dom'
+import BoardGame from './pages/BoardGame'
 
 export const routes = [
-  { path: 'start-game', component: Game },
+  { path: 'start-game', component: BoardGame },
   { path: 'lobby/:gameID', component: Lobby },
   { path: 'test-lobby', component: TestLobby },
   { path: '/', component: StartMenu },

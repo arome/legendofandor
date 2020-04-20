@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import ImageMapper from 'react-image-mapper'
 import gameBoard from '../assets/images/Andor_Board.jpg'
-import character from '../assets/images/characters/pawns/archer.png'
+import character from '../assets/images/characters/pawns/Archer_male.png'
 import './Board.scss'
 import tiles from './tiles'
 import Swal from 'sweetalert2'
@@ -52,7 +52,7 @@ export default class GameBoard extends Component {
   }
 
   enterArea(area) {
-    this.props.moves.setHoveredArea(this.props.playerID, area)
+    this.props.moves.setHoveredArea(area)
   }
 
   clicked(area) {
@@ -76,18 +76,17 @@ export default class GameBoard extends Component {
             ? this.props.moves.move(to)
             : result.dismiss === 'cancel' &&
               this.props.moves.drawPath(
-                this.props.playerID,
                 lastSelected,
                 this.props.G.players[this.props.playerID].positionOnMap
               )
         })
     } else {
-      this.props.moves.drawPath(this.props.playerID, lastSelected, to)
+      this.props.moves.drawPath(lastSelected, to)
     }
   }
 
   leaveArea() {
-    this.props.moves.setHoveredArea(this.props.playerID, null)
+    this.props.moves.setHoveredArea(null)
   }
 
   getTipPosition(area) {
@@ -98,7 +97,9 @@ export default class GameBoard extends Component {
     const center = this.computeCenter(area)
     return {
       top: `${center[1] - this.getCharacterSize().heigth / 3}px`,
-      left: `${center[0] - (Math.pow(-1, pos) * (numOccurence - 1) * this.getCharacterSize().width) / 2}px`,
+      left: `${
+        center[0] - (Math.pow(-1, pos) * (numOccurence - 1) * this.getCharacterSize().width) / 2
+      }px`,
     }
   }
 
@@ -156,7 +157,11 @@ export default class GameBoard extends Component {
     }
     const myHoveredArea = this.props.G.players[this.props.playerID].hoveredArea
     myHoveredArea &&
-      hoveredAreas.push({ ...myHoveredArea, strokeColor: colors[this.props.playerID], _id: this.props.playerID })
+      hoveredAreas.push({
+        ...myHoveredArea,
+        strokeColor: colors[this.props.playerID],
+        _id: this.props.playerID,
+      })
     return hoveredAreas
   }
 
