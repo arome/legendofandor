@@ -42,12 +42,16 @@ export default () => {
   }
 
   useEffect(() => {
-    Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
-      setPlayers(res.data.players)
-      setPlayerNames(Array(players.length).fill(null))
-      setSetupData(res.data.setupData)
-    })
+    const interval = setInterval(() => {
+      Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
+        setPlayers(res.data.players)
+        setPlayerNames(Array(players.length).fill(null))
+        setSetupData(res.data.setupData)
+      })
+    }, 1000)
+    return () => clearInterval(interval)
   }, [gameID, players.length])
+
   const divStyle = {
     width: '100vw',
     height: '100vh',
