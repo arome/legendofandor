@@ -7,25 +7,45 @@ import { useParams } from 'react-router-dom'
 import './Lobby.scss'
 import { Button } from 'semantic-ui-react'
 import PlayerNameModal from '../modals/PlayerNameModal'
-import character from '../assets/images/characters/pictures/Warrior_male.jpg'
+import HeroSelectionModal from '../modals/HeroSelectionModal'
+import character from '../assets/images/characters/pictures/no_character.png'
 
 export default () => {
   const { gameID } = useParams()
   const [playerName, setPlayerName] = useState('')
+  const [playerID, setPlayerID] = useState(null)
   const [players, setPlayers] = useState([])
   const [playerCredentials, setPlayerCredentials] = useState('')
   const [setupData, setSetupData] = useState({})
   const [openPlayerName, setOpenPlayerName] = useState(false)
-  const [selectedPlayer, setSelectedPlayer] = useState(null)
+  const [openHeroSelection, setOpenHeroSelection] = useState(false)
+  const [selectedHero, setSelectedHero] = useState(null)
   const [cookie, setCookie] = useState({})
+
   const handleClosePlayerName = () => {
     setOpenPlayerName(false)
-    setSelectedPlayer(null)
+    setPlayerID(null)
   }
 
-  const getPlayerName = (playerID) => {
-    setSelectedPlayer(playerID)
+  const handleCloseHeroSelection = () => {
+    setOpenHeroSelection(false)
+  }
+
+  const getPlayerName = (pid) => {
+    setPlayerID(pid)
     setOpenPlayerName(true)
+  }
+
+  const updateCookie = () => {
+    let newCookie = cookie
+    newCookie[gameID] = {
+      selectedHero,
+      playerID,
+      playerName,
+      playerCredentials,
+    }
+    setCookie(newCookie)
+    Cookies.save('lobby', cookie, { path: '/' })
   }
 
   const joinGame = (playerID, playerName) => {
@@ -35,21 +55,32 @@ export default () => {
       const playerCredentials = res.data
       setPlayerCredentials(playerCredentials)
       setPlayerName(playerName)
-      let newCookie = cookie
-      newCookie[gameID] = {
-        playerName,
-        playerCredentials,
-      }
-      setCookie(newCookie)
-      Cookies.save('lobby', cookie, { path: '/' })
+      updateCookie()
     })
+  }
+
+  const updateHero = (hero) => {
+    setSelectedHero(hero)
+    let newCookie = cookie
+    newCookie[gameID] = {
+      selectedHero: hero,
+      playerID,
+      playerName,
+      playerCredentials,
+    }
+    setCookie(newCookie)
+    Cookies.save('lobby', cookie, { path: '/' })
   }
 
   useEffect(() => {
     const browserCookie = Cookies.load('lobby') || {}
     setCookie(browserCookie)
-    setPlayerName(gameID in browserCookie ? browserCookie[gameID].playerName : '')
-    setPlayerCredentials(gameID in browserCookie ? browserCookie[gameID].playerCredentials : '')
+    if (gameID in browserCookie) {
+      setPlayerName(browserCookie[gameID].playerName)
+      setPlayerCredentials(browserCookie[gameID].playerCredentials)
+      setSelectedHero(browserCookie[gameID].selectedHero)
+      setPlayerID(browserCookie[gameID].playerID)
+    }
     const interval = setInterval(() => {
       Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
         setPlayers(res.data.players)
@@ -68,7 +99,6 @@ export default () => {
     backgroundSize: '100% 100%',
   }
 
-  const characterSelection = (playerID) => {}
   return (
     <div className="lobby" style={divStyle}>
       <div className="header">
@@ -77,17 +107,22 @@ export default () => {
       <div className="content">
         <div className="players">
           {players.map((player, key) => {
+            const characterImage =
+              selectedHero && player.id === playerID
+                ? require(`../assets/images/characters/pictures/${selectedHero}.jpg`)
+                : character
+
             return (
               <div className="player" key={key}>
                 <div style={{ display: 'block', position: 'relative' }}>
-                  <img className="character-image" alt="character" src={character}></img>
-                  {playerName === player.name && (
-                    <Button onClick={() => characterSelection(player.id)}>Choose Character</Button>
+                  <img className="character-image" alt="character" src={characterImage}></img>
+                  {playerID === player.id && (
+                    <Button onClick={() => setOpenHeroSelection(true)}>Choose Character</Button>
                   )}
                 </div>
                 {'name' in player ? (
                   <h3>{player.name}</h3>
-                ) : !playerName ? (
+                ) : playerID === null ? (
                   <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(player.id)}>
                     Join as player {player.id + 1}
                   </Button>
@@ -103,8 +138,9 @@ export default () => {
         open={openPlayerName}
         handleClose={handleClosePlayerName}
         joinGame={joinGame}
-        playerID={selectedPlayer}
+        playerID={playerID}
       />
+      <HeroSelectionModal open={openHeroSelection} handleClose={handleCloseHeroSelection} selectHero={updateHero} />
     </div>
   )
 }

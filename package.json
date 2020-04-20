@@ -33,6 +33,7 @@
     "react-cookies": "^0.1.1",
     "react-dom": "^16.13.1",
     "react-image-mapper": "github:arome/react-image-mapper#dev",
+    "react-responsive-carousel": "^3.2.4",
     "react-router-dom": "^5.1.2",
     "react-scripts": "3.4.1",
     "redux-logger": "^3.0.6",
