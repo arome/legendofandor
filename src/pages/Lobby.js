@@ -3,7 +3,7 @@ import background from '../assets/images/Lobby.jpg'
 import Cookies from 'react-cookies'
 import Axios from 'axios'
 import { server, name } from '../common'
-import { useParams } from 'react-router-dom'
+import { useParams, useHistory } from 'react-router-dom'
 import './Lobby.scss'
 import { Button } from 'semantic-ui-react'
 import PlayerNameModal from '../modals/PlayerNameModal'
@@ -12,6 +12,7 @@ import character from '../assets/images/characters/pictures/no_character.png'
 
 export default () => {
   const { gameID } = useParams()
+  const history = useHistory()
   const [playerName, setPlayerName] = useState('')
   const [playerID, setPlayerID] = useState(null)
   const [players, setPlayers] = useState([])
@@ -52,7 +53,7 @@ export default () => {
     setOpenPlayerName(false)
 
     Axios.post(`${server}/games/${name}/${gameID}/join`, { playerID, playerName }).then((res) => {
-      const playerCredentials = res.data
+      const playerCredentials = res.data.playerCredentials
       setPlayerCredentials(playerCredentials)
       setPlayerName(playerName)
       updateCookie()
@@ -133,6 +134,16 @@ export default () => {
             )
           })}
         </div>
+        {selectedHero && (
+          <Button
+            className="start-game-button"
+            onClick={() =>
+              history.push('/start-game', { playerID, gameID, playerCredentials, numPlayers: players.length })
+            }
+          >
+            Start Game
+          </Button>
+        )}
       </div>
       <PlayerNameModal
         open={openPlayerName}

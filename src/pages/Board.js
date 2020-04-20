@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import ImageMapper from 'react-image-mapper'
 import gameBoard from '../assets/images/Andor_Board.jpg'
 import character from '../assets/images/characters/pawns/archer.png'
-import './Board.css'
+import './Board.scss'
 import tiles from './tiles'
 import Swal from 'sweetalert2'
 

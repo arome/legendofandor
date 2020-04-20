@@ -1,16 +1,16 @@
 import { Client } from 'boardgame.io/react'
 import { SocketIO, Local } from 'boardgame.io/multiplayer'
-import LegendOfAndor from '../game'
-import Board from './Board'
+import game from '../game'
+import board from './Board'
 import { server } from '../common'
 
 import logger from 'redux-logger'
 import { applyMiddleware } from 'redux'
 
 export default Client({
-  game: LegendOfAndor,
-  board: Board,
+  game,
+  board,
   debug: true,
   enhancer: applyMiddleware(logger),
-  multiplayer: Local(), //SocketIO({ server }),
+  multiplayer: server.includes('localhost') ? Local() : SocketIO({ server }),
 })
