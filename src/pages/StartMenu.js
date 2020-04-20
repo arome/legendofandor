@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
-import logo from '../assets/images/LOA_icon.png'
+import logo from '../assets/images/LOA_icon_small.png'
 import { AwesomeButton } from 'react-awesome-button'
 import styles from 'react-awesome-button/src/styles/themes/theme-blue'
 import './StartMenu.scss'
-import CreateGameModal from '../components/CreateGameModal'
-import JoinGameModal from '../components/JoinGameModal'
+import CreateGameModal from '../modals/CreateGameModal'
+import JoinGameModal from '../modals/JoinGameModal'
 
 function StartMenu() {
   const [openCreate, setOpenCreate] = useState(false)

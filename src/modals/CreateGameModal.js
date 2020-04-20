@@ -2,20 +2,22 @@ import React, { useState } from 'react'
 import { useHistory } from 'react-router-dom'
 import { Form, Modal } from 'semantic-ui-react'
 import './CreateGameModal.scss'
+import axios from 'axios'
+import LOA from '../game'
+import { server } from '../common'
 
 const CreateGameModal = (props) => {
-  const [name, setName] = useState('')
   const [difficulty, setDifficulty] = useState('easy')
   const [numPlayers, setNumPlayers] = useState(2)
   const history = useHistory()
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    const valid = name.length > 0
-    if (valid) {
-      // call api
-      // history.push(`/lobby`)
-    }
+    const setupData = { difficulty }
+    axios.post(`${server}/games/${LOA.name}/create`, { numPlayers, setupData }).then((res) => {
+      const { gameID } = res.data
+      history.push(`/lobby/${gameID}`)
+    })
   }
 
   return (
@@ -23,15 +25,6 @@ const CreateGameModal = (props) => {
       <Modal.Header>Create a New Game</Modal.Header>
       <Modal.Content>
         <Form onSubmit={handleSubmit}>
-          <Form.Input
-            fluid
-            label="Game name"
-            placeholder="Enter the game name here..."
-            onChange={(e) => setName(e.target.value)}
-            icon="game"
-            iconPosition="left"
-          />
-
           <Form.Select
             defaultValue={numPlayers}
             onChange={(d, e) => setNumPlayers(e.value)}

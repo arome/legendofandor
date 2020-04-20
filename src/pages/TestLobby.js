@@ -2,11 +2,9 @@ import React from 'react'
 import { Lobby } from 'boardgame.io/react'
 import { default as BoardLOA } from './Board'
 import GameLOA from '../game'
-import './Lobby.css'
+import './Lobby.scss'
+import { server } from '../common'
 
-const hostname = window.location.hostname
-const PORT = process.env.PORT || 8000
-const server = hostname === 'localhost' ? `http://${hostname}:${PORT}` : `https://${hostname}`
 const importedGames = [{ game: GameLOA, board: BoardLOA }]
 
 const LobbyView = () => (

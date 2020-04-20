@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import ImageMapper from 'react-image-mapper'
 import gameBoard from '../assets/images/Andor_Board.jpg'
-import character from '../assets/images/archer.png'
+import character from '../assets/images/characters/pawns/archer.png'
 import './Board.css'
 import tiles from './tiles'
 import Swal from 'sweetalert2'
@@ -22,6 +22,13 @@ export default class GameBoard extends Component {
           coords: vertice.data.area,
         }
       }),
+    }
+
+    document.oncontextmenu = function (e) {
+      if (e.button === 2) {
+        e.preventDefault()
+        return false
+      }
     }
 
     this.state = {

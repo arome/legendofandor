@@ -10,7 +10,7 @@ import { Switch, Route } from 'react-router-dom'
 export const routes = [
   { path: 'start-game-1', component: Game1 },
   { path: 'start-game-2', component: Game2 },
-  { path: 'lobby', component: Lobby },
+  { path: 'lobby/:gameID', component: Lobby },
   { path: 'test-lobby', component: TestLobby },
   { path: '/', component: StartMenu },
 ]

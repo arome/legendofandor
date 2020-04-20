@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import './index.css'
+import './index.scss'
 import App from './App'
 import * as serviceWorker from './serviceWorker'
 
@@ -11,13 +11,6 @@ const divStyle = {
   height: '100vh',
   backgroundImage: `url(${background})`,
   backgroundSize: '100% 100%',
-}
-
-document.oncontextmenu = function (e) {
-  if (e.button === 2) {
-    e.preventDefault()
-    return false
-  }
 }
 
 ReactDOM.render(
