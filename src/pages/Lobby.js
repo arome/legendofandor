@@ -9,6 +9,7 @@ import { Button } from 'semantic-ui-react'
 import PlayerNameModal from '../modals/PlayerNameModal'
 import HeroSelectionModal from '../modals/HeroSelectionModal'
 import character from '../assets/images/characters/pictures/no_character.png'
+import { Icon } from 'semantic-ui-react'
 
 export default () => {
   const { gameID } = useParams()
@@ -101,20 +102,23 @@ export default () => {
             return (
               <div className="player" key={key}>
                 <div style={{ display: 'block', position: 'relative' }}>
-                  <img className="character-image" alt="character" src={characterImage}></img>
+                  <img className="player-image" alt="character" src={characterImage}></img>
                   {playerID === player.id && (
                     <Button onClick={() => setOpenHeroSelection(true)}>Choose Character</Button>
                   )}
                 </div>
-                {'name' in player ? (
-                  <h3>{player.name}</h3>
-                ) : playerID === null ? (
-                  <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(player.id)}>
-                    Join as player {player.id + 1}
-                  </Button>
-                ) : (
-                  <h3>Waiting for others...</h3>
-                )}
+                <div className="player-footer">
+                  {'name' in player ? (
+                    <h3>{player.name}</h3>
+                  ) : playerID === null ? (
+                    <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(player.id)}>
+                      Join as player {player.id + 1}
+                    </Button>
+                  ) : (
+                    <h3>Waiting for others...</h3>
+                  )}
+                  <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
+                </div>
               </div>
             )
           })}

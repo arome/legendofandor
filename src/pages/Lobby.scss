@@ -27,6 +27,16 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+        .player-footer {
+          margin-top: 10px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          h3 {
+            margin-bottom: 0;
+            margin-right: 5px;
+          }
+        }
         div {
           img {
             max-height: 100%;

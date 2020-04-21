@@ -1,21 +1,5 @@
 import tiles from './pages/tiles'
 import { Stage } from 'boardgame.io/core'
-import { PluginPlayer } from 'boardgame.io/plugins'
-
-// define a function to initialize each player’s state
-const playerSetup = (playerID) => ({
-  health: 10,
-  attack: 10,
-  move: 1,
-  nbOfDice: 2,
-  specialAbility: 'none',
-  strength: 1,
-  willpower: 7,
-  rank: 7,
-  positionOnMap: 0,
-  hoveredArea: null,
-  path: [],
-})
 
 function distance(from, to) {
   var iDiff = from.data.i - to.data.i
@@ -24,17 +8,15 @@ function distance(from, to) {
 }
 
 const LegendOfAndor = {
-  name: 'Legend-of-andor',
+  name: 'legend-of-andor',
   minPlayers: 2,
   maxPlayers: 4,
 
-  setup: (ctx, setupData) => ({
-    difficulty: setupData && setupData.difficulty,
-    hoursPassed: 0,
-    round: 0,
-    legend: 1,
-    players: [
-      {
+  setup: (ctx, setupData) => {
+    const players = {}
+    for (let i = 0; i < ctx.numPlayers; i++) {
+      players[i] = {
+        hoursPassed: 0,
         health: 10,
         attack: 10,
         move: 1,
@@ -46,29 +28,23 @@ const LegendOfAndor = {
         positionOnMap: 0,
         hoveredArea: null,
         path: [],
-      },
-      {
-        health: 10,
-        attack: 10,
-        move: 1,
-        nbOfDice: 2,
-        specialAbility: 'none',
-        strength: 1,
-        willpower: 7,
-        rank: 7,
-        positionOnMap: 0,
-        hoveredArea: null,
-        path: [],
-      },
-    ],
-    letter: 'A',
-  }),
+      }
+    }
+
+    return {
+      difficulty: setupData && setupData.difficulty,
+      round: 0,
+      legend: 1,
+      letter: 'A',
+      players,
+    }
+  },
 
   moves: {
     move(G, ctx, id) {
       G.players[ctx.currentPlayer].positionOnMap = id
       G.hoursPassed++
-      G.players.map((player) => (player.path = []))
+      Object.keys(G.players).map((playerID) => (G.players[playerID].path = []))
       ctx.events.endTurn()
     },
     fight(G, ctx, id) {},
@@ -88,19 +64,12 @@ const LegendOfAndor = {
         else {
           // Player clicked on a new area, extend path
           from = from || startingPosition
-          const path = tiles.dijkstra.shortestPath(
-            tiles.graph.vertices[from],
-            tiles.graph.vertices[to],
-            {
-              OUT: { heuristic: (n) => distance(n, to) },
-              IN: { heuristic: (n) => distance(n, from) },
-            }
-          )
+          const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
+            OUT: { heuristic: (n) => distance(n, to) },
+            IN: { heuristic: (n) => distance(n, from) },
+          })
           if (path) {
-            const newSteps = path.map((step) => [
-              parseInt(step.from.data.id),
-              parseInt(step.to.data.id),
-            ])
+            const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
             if (players[player].path.length > 0) {
               // If there was already a path drawn
               const oldTo = [startingPosition].concat(players[player].path.map((step) => step[1]))
@@ -112,8 +81,7 @@ const LegendOfAndor = {
                 if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
               }
               if (newToList.length > 0)
-                for (let i = 0; i < newToList.length - 1; i++)
-                  steps.push([newToList[i], newToList[i + 1]])
+                for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
             }
             if (steps.length === 0) steps = players[player].path.concat(newSteps)
           } else {
@@ -153,24 +121,15 @@ const LegendOfAndor = {
               else {
                 // Player clicked on a new area, extend path
                 from = from || startingPosition
-                const path = tiles.dijkstra.shortestPath(
-                  tiles.graph.vertices[from],
-                  tiles.graph.vertices[to],
-                  {
-                    OUT: { heuristic: (n) => distance(n, to) },
-                    IN: { heuristic: (n) => distance(n, from) },
-                  }
-                )
+                const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
+                  OUT: { heuristic: (n) => distance(n, to) },
+                  IN: { heuristic: (n) => distance(n, from) },
+                })
                 if (path) {
-                  const newSteps = path.map((step) => [
-                    parseInt(step.from.data.id),
-                    parseInt(step.to.data.id),
-                  ])
+                  const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
                   if (players[player].path.length > 0) {
                     // If there was already a path drawn
-                    const oldTo = [startingPosition].concat(
-                      players[player].path.map((step) => step[1])
-                    )
+                    const oldTo = [startingPosition].concat(players[player].path.map((step) => step[1]))
                     const newTo = newSteps.map((step) => step[1])
                     let newToList = []
                     for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
@@ -179,8 +138,7 @@ const LegendOfAndor = {
                       if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
                     }
                     if (newToList.length > 0)
-                      for (let i = 0; i < newToList.length - 1; i++)
-                        steps.push([newToList[i], newToList[i + 1]])
+                      for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
                   }
                   if (steps.length === 0) steps = players[player].path.concat(newSteps)
                 } else {
@@ -211,8 +169,6 @@ const LegendOfAndor = {
       return moves
     },
   },
-
-  plugins: [PluginPlayer({ setup: playerSetup })],
 }
 
 export default LegendOfAndor

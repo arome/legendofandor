@@ -75,10 +75,7 @@ export default class GameBoard extends Component {
           'value' in result
             ? this.props.moves.move(to)
             : result.dismiss === 'cancel' &&
-              this.props.moves.drawPath(
-                lastSelected,
-                this.props.G.players[this.props.playerID].positionOnMap
-              )
+              this.props.moves.drawPath(lastSelected, this.props.G.players[this.props.playerID].positionOnMap)
         })
     } else {
       this.props.moves.drawPath(lastSelected, to)
@@ -93,21 +90,37 @@ export default class GameBoard extends Component {
     return { top: `${area.center[1]}px`, left: `${area.center[0]}px` }
   }
 
-  getPlayerPosition(area, pos, numOccurence) {
+  getPlayerPosition(area, playerID, duplicates) {
     const center = this.computeCenter(area)
+    const horizontalTranslation = this.getCharacterSize().width / 2
+    const veritcalTranslation = (this.getCharacterSize().heigth * 2) / 5
+    let topPosition = center[1]
+    let leftPosition = center[0]
+    const pos = duplicates.indexOf(playerID)
+    if (duplicates.length > 1) {
+      switch (pos) {
+        case 0:
+        case 3:
+          topPosition += (pos === 0 ? -1 : 1) * veritcalTranslation
+          break
+        case 1:
+        case 2:
+          leftPosition += Math.pow(-1, pos - 1) * horizontalTranslation
+          break
+        default:
+      }
+    }
     return {
-      top: `${center[1] - this.getCharacterSize().heigth / 3}px`,
-      left: `${
-        center[0] - (Math.pow(-1, pos) * (numOccurence - 1) * this.getCharacterSize().width) / 2
-      }px`,
+      top: `${topPosition}px`,
+      left: `${leftPosition}px`,
     }
   }
 
   getCharacterSize = () => {
     const scale = (2 * this.state.windowWidth) / this.originalImgWidth
     return {
-      width: 155 * scale,
-      heigth: 251 * scale,
+      width: 100 * scale,
+      heigth: 162 * scale,
     }
   }
 
@@ -166,22 +179,27 @@ export default class GameBoard extends Component {
   }
 
   renderPlayers = () => {
-    const positions = this.props.G.players.map((player) => player.positionOnMap)
-    return this.props.G.players.map((player, pos) => {
-      const numOccurence = positions.filter((v) => v === player.positionOnMap).length
+    const players = this.props.G.players
+    return Object.keys(players).map((playerID) => {
+      const positionOnMap = players[playerID].positionOnMap
+      const duplicates = Object.keys(players).filter((pplayerID) => players[pplayerID].positionOnMap === positionOnMap)
       return (
         <img
-          key={pos}
+          key={playerID}
           src={character}
           alt="character"
           className="character"
           style={{
-            ...this.getPlayerPosition(this.MAP.areas[player.positionOnMap], pos, numOccurence),
+            ...this.getPlayerPosition(this.MAP.areas[positionOnMap], playerID, duplicates),
             ...this.getCharacterSize(),
           }}
         />
       )
     })
+  }
+
+  renderHoursToken = () => {
+    // const positions = this.props.G.players.map((player) => player.hous)
   }
 
   render() {
@@ -209,6 +227,7 @@ export default class GameBoard extends Component {
           </span>
         )}
         {this.renderPlayers()}
+        {this.renderHoursToken()}
       </div>
     )
   }

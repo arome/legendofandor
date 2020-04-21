@@ -1,5 +1,5 @@
 import React from 'react'
-import { Modal, Button } from 'semantic-ui-react'
+import { Modal, Button, Icon } from 'semantic-ui-react'
 import { Carousel } from 'react-responsive-carousel'
 import 'react-responsive-carousel/lib/styles/carousel.min.css'
 
@@ -31,7 +31,7 @@ export default (props) => {
                     props.handleClose()
                   }}
                 >
-                  Select {heroType} <i className={`${heroGender === 'Male' ? 'man' : 'woman'} icon`}></i>
+                  Select {heroType} <Icon name={heroGender === 'Male' ? 'man' : 'woman'} />
                 </Button>
               </div>
             )
