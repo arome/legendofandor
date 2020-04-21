@@ -259,6 +259,20 @@ const nextTile = {
   84: 84,
 }
 
+const hours = {
+  0: [3410, 44, 4778, 750],
+  1: [4880, 100, 5194, 396],
+  2: [5299, 87, 5603, 392],
+  3: [5725, 87, 6013, 392],
+  4: [6135, 78, 6422, 392],
+  5: [6544, 70, 6840, 383],
+  6: [6962, 78, 7259, 383],
+  7: [7372, 78, 7668, 392],
+  8: [7921, 78, 8234, 383],
+  9: [8347, 87, 8644, 383],
+  10: [8757, 78, 9062, 383],
+}
+
 for (const area in areas) {
   graph.addVertex({ id: area, area: areas[area] })
 }
@@ -269,4 +283,4 @@ for (const tile in neighbors) {
 
 const dijkstra = new jKstra.algos.Dijkstra(graph)
 
-export default { graph, dijkstra }
+export default { graph, hours, dijkstra }
