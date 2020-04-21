@@ -13,6 +13,10 @@ export default class GameBoard extends Component {
   originalImgWidth = 9861
   constructor(props) {
     super(props)
+    this.playersToken = {}
+    ;['red', 'blue', 'green', 'yellow'].map(
+      (color, index) => (this.playersToken[index] = require(`../assets/images/tokens/${color}.png`))
+    )
     this.MAP = {
       name: 'my-map',
       areas: tiles.graph.vertices.map((vertice) => {
@@ -114,6 +118,26 @@ export default class GameBoard extends Component {
     }
   }
 
+  getTokenPosition(area, playerID) {
+    const center = this.computeCenter(area)
+    const horizontalTranslation = this.getCharacterSize().width / 2
+    const veritcalTranslation = (this.getCharacterSize().heigth * 2) / 5
+    let topPosition = center[1]
+    let leftPosition = center[0]
+    return {
+      top: `${topPosition}px`,
+      left: `${leftPosition}px`,
+    }
+  }
+
+  getTokenSize = () => {
+    const scale = (2 * this.state.windowWidth) / this.originalImgWidth
+    return {
+      width: 50 * scale,
+      heigth: 50 * scale,
+    }
+  }
+
   getCharacterSize = () => {
     const scale = (2 * this.state.windowWidth) / this.originalImgWidth
     return {
@@ -197,7 +221,22 @@ export default class GameBoard extends Component {
   }
 
   renderHoursToken = () => {
-    // const positions = this.props.G.players.map((player) => player.hous)
+    const players = this.props.G.players
+    return Object.keys(players).map((playerID) => {
+      const hoursPassed = players[playerID].hoursPassed
+      return (
+        <img
+          key={playerID}
+          alt="player token"
+          src={this.playersToken[playerID]}
+          className="character"
+          style={{
+            ...this.getTokenPosition({ coords: tiles.hours[hoursPassed] }, playerID),
+            ...this.getTokenSize(),
+          }}
+        />
+      )
+    })
   }
 
   render() {
