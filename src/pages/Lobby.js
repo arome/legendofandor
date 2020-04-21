@@ -104,40 +104,54 @@ export default () => {
                 <div style={{ display: 'block', position: 'relative' }}>
                   <img className="player-image" alt="character" src={characterImage}></img>
                   {playerID === player.id && (
-                    <Button onClick={() => setOpenHeroSelection(true)}>Choose Character</Button>
+                    <Button className="choose-character-button" onClick={() => setOpenHeroSelection(true)}>
+                      {selectedHero ? 'Switch' : 'Choose'} Hero
+                    </Button>
                   )}
                 </div>
                 <div className="player-footer">
                   {'name' in player ? (
-                    <h3>{player.name}</h3>
+                    <React.Fragment>
+                      <h3>{player.name}</h3>
+                      <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
+                    </React.Fragment>
                   ) : playerID === null ? (
                     <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(player.id)}>
                       Join as player {player.id + 1}
+                      <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
                     </Button>
                   ) : (
-                    <h3>Waiting for others...</h3>
+                    <React.Fragment>
+                      <h3>Waiting for others...</h3>
+                      <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
+                    </React.Fragment>
                   )}
-                  <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
                 </div>
               </div>
             )
           })}
         </div>
-        {selectedHero && (
-          <Button
-            className="start-game-button"
-            onClick={() =>
-              history.push('/start-game', {
-                playerID,
-                gameID,
-                credentials,
-                numPlayers: players.length,
-                selectedHero,
-              })
-            }
-          >
-            Start Game
-          </Button>
+        {playerID !== null ? (
+          selectedHero ? (
+            <Button
+              className="start-game-button"
+              onClick={() =>
+                history.push('/start-game', {
+                  playerID,
+                  gameID,
+                  credentials,
+                  numPlayers: players.length,
+                  selectedHero,
+                })
+              }
+            >
+              Start Game
+            </Button>
+          ) : (
+            <h2>Please Select Your Hero</h2>
+          )
+        ) : (
+          <h2>Please Select Your Player</h2>
         )}
       </div>
       <PlayerNameModal

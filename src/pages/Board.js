@@ -59,8 +59,8 @@ export default class GameBoard extends Component {
     const to = parseInt(area.name)
     const myPath = this.props.G.players[this.props.playerID].path
     const lastSelected = myPath.length > 0 ? myPath[myPath.length - 1][1] : null
-    if (lastSelected === to) {
-      if (this.props.playerID === this.props.ctx.currentPlayer)
+    lastSelected === to
+      ? this.props.playerID === this.props.ctx.currentPlayer &&
         Swal.fire({
           title: 'Confirm move?',
           icon: 'question',
@@ -77,9 +77,7 @@ export default class GameBoard extends Component {
             : result.dismiss === 'cancel' &&
               this.props.moves.drawPath(lastSelected, this.props.G.players[this.props.playerID].positionOnMap)
         })
-    } else {
-      this.props.moves.drawPath(lastSelected, to)
-    }
+      : this.props.moves.drawPath(lastSelected, to)
   }
 
   leaveArea() {

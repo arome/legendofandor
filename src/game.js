@@ -7,6 +7,67 @@ function distance(from, to) {
   return Math.sqrt(iDiff * iDiff + jDiff * jDiff)
 }
 
+const allPlayersMove = {
+  drawPath: {
+    move: (G, ctx, from, to) => {
+      let steps = []
+      const player = ctx.playerID
+      const { players } = G
+      const startingPosition = players[ctx.currentPlayer].positionOnMap
+      const currentPath = players[player].path
+      const areaInPath = currentPath.findIndex((step) => step.includes(to))
+      if (to === startingPosition)
+        // Player clicked on starting position
+        to = null
+      else if (areaInPath > -1)
+        // Player clicked on an area already in path, remove path after it
+        steps = currentPath.slice(0, areaInPath + 1)
+      else {
+        // Player clicked on a new area, extend path
+        if (currentPath.length < 10) {
+          from = from || startingPosition
+          let path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
+            OUT: { heuristic: (n) => distance(n, to) },
+            IN: { heuristic: (n) => distance(n, from) },
+          })
+          if (path) {
+            if (currentPath.length + path.length > 10) {
+              path = path.slice(0, 10 - currentPath.length)
+            }
+            const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
+            if (currentPath.length > 0) {
+              // If there was already a path drawn
+              const oldTo = [startingPosition].concat(players[player].path.map((step) => step[1]))
+              const newTo = newSteps.map((step) => step[1])
+              let newToList = []
+              for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
+                // If new path crosses existing path, replace where it crosses
+                const pos = newTo.indexOf(oldTo[i])
+                if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
+              }
+              if (newToList.length > 0)
+                for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
+            }
+            if (steps.length === 0) steps = players[player].path.concat(newSteps)
+          } else {
+            steps = currentPath
+          }
+        } else {
+          steps = currentPath
+        }
+      }
+      G.players[player].path = steps
+    },
+    redact: true,
+  },
+  setHoveredArea: {
+    move: (G, ctx, area) => {
+      G.players[ctx.playerID].hoveredArea = area
+    },
+    redact: true,
+  },
+}
+
 const LegendOfAndor = {
   name: 'legend-of-andor',
   minPlayers: 2,
@@ -41,117 +102,26 @@ const LegendOfAndor = {
   },
 
   moves: {
-    move(G, ctx, id) {
-      G.players[ctx.currentPlayer].positionOnMap = id
-      G.hoursPassed++
+    ...allPlayersMove,
+    move(G, ctx, to) {
+      G.players[ctx.currentPlayer].positionOnMap = to
+      G.players[ctx.currentPlayer].hoursPassed += G.players[ctx.currentPlayer].path.length
       Object.keys(G.players).map((playerID) => (G.players[playerID].path = []))
       ctx.events.endTurn()
     },
     fight(G, ctx, id) {},
-    drawPath: {
-      move: (G, ctx, from, to) => {
-        const player = ctx.playerID
-        let steps = []
-        const { players } = G
-        const startingPosition = players[ctx.currentPlayer].positionOnMap
-        const areaInPath = players[player].path.findIndex((step) => step.includes(to))
-        if (to === startingPosition)
-          // Player clicked on starting position
-          to = null
-        else if (areaInPath > -1)
-          // Player clicked on an area already in path, remove path after it
-          steps = players[player].path.slice(0, areaInPath + 1)
-        else {
-          // Player clicked on a new area, extend path
-          from = from || startingPosition
-          const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
-            OUT: { heuristic: (n) => distance(n, to) },
-            IN: { heuristic: (n) => distance(n, from) },
-          })
-          if (path) {
-            const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
-            if (players[player].path.length > 0) {
-              // If there was already a path drawn
-              const oldTo = [startingPosition].concat(players[player].path.map((step) => step[1]))
-              const newTo = newSteps.map((step) => step[1])
-              let newToList = []
-              for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
-                // If new path crosses existing path, replace where it crosses
-                const pos = newTo.indexOf(oldTo[i])
-                if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
-              }
-              if (newToList.length > 0)
-                for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
-            }
-            if (steps.length === 0) steps = players[player].path.concat(newSteps)
-          } else {
-            steps = G.players[player].path
-          }
-        }
-        G.players[player].path = steps
-      },
-      redact: true,
-    },
-    setHoveredArea: {
-      move: (G, ctx, area) => {
-        G.players[ctx.playerID].hoveredArea = area
-      },
-      redact: true,
-    },
   },
 
   turn: {
-    activePlayers: { all: Stage.NULL },
+    // Called at the beginning of a turn.
+    onBegin: (G, ctx) => {
+      ctx.events.setActivePlayers({ others: 'displayMapInput', currentPlayer: Stage.NULL })
+    },
+
     stages: {
-      drawPath: {
+      displayMapInput: {
         moves: {
-          drawPath: {
-            move: (G, ctx, from, to) => {
-              let steps = []
-              const player = ctx.playerID
-              const { players } = G
-              const startingPosition = players[ctx.currentPlayer].positionOnMap
-              const areaInPath = players[player].path.findIndex((step) => step.includes(to))
-              if (to === startingPosition)
-                // Player clicked on starting position
-                to = null
-              else if (areaInPath > -1)
-                // Player clicked on an area already in path, remove path after it
-                steps = players[player].path.slice(0, areaInPath + 1)
-              else {
-                // Player clicked on a new area, extend path
-                from = from || startingPosition
-                const path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
-                  OUT: { heuristic: (n) => distance(n, to) },
-                  IN: { heuristic: (n) => distance(n, from) },
-                })
-                if (path) {
-                  const newSteps = path.map((step) => [parseInt(step.from.data.id), parseInt(step.to.data.id)])
-                  if (players[player].path.length > 0) {
-                    // If there was already a path drawn
-                    const oldTo = [startingPosition].concat(players[player].path.map((step) => step[1]))
-                    const newTo = newSteps.map((step) => step[1])
-                    let newToList = []
-                    for (let i = 0; i < oldTo.length && newToList.length === 0; i++) {
-                      // If new path crosses existing path, replace where it crosses
-                      const pos = newTo.indexOf(oldTo[i])
-                      if (pos > -1) newToList = oldTo.slice(0, i).concat(newTo.slice(pos))
-                    }
-                    if (newToList.length > 0)
-                      for (let i = 0; i < newToList.length - 1; i++) steps.push([newToList[i], newToList[i + 1]])
-                  }
-                  if (steps.length === 0) steps = players[player].path.concat(newSteps)
-                } else {
-                  steps = G.players[player].path
-                }
-              }
-              G.players[player].path = steps
-            },
-            redact: true,
-          },
-          setHoveredArea: {
-            move: (G, ctx, area) => (G.players[ctx.playerID].hoveredArea = area),
-          },
+          ...allPlayersMove,
         },
       },
     },
