@@ -5,6 +5,8 @@ import character from '../assets/images/characters/pawns/Archer_male.png'
 import './Board.scss'
 import tiles from './tiles'
 import Swal from 'sweetalert2'
+import { css } from '@emotion/core'
+import { ClockLoader } from 'react-spinners'
 
 export default class GameBoard extends Component {
   MAP
@@ -35,9 +37,11 @@ export default class GameBoard extends Component {
       }
     }
 
+    this.loadingImage = true
     this.state = {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
+      loadingImage: true,
     }
   }
 
@@ -165,7 +169,7 @@ export default class GameBoard extends Component {
   }
 
   getPaths(colors) {
-    const numPlayers = this.props.G.players.length
+    const numPlayers = Object.keys(this.props.G.players).length
     const paths = []
     for (let i = 0; i < numPlayers; i++)
       if (i !== parseInt(this.props.playerID))
@@ -223,7 +227,9 @@ export default class GameBoard extends Component {
   renderHoursToken = () => {
     const players = this.props.G.players
     return Object.keys(players).map((playerID) => {
-      const hoursPassed = players[playerID].hoursPassed
+      const hoursPassed =
+        players[playerID].hoursPassed +
+        (this.props.playerID === this.props.ctx.currentPlayer ? players[playerID].path.length : 0)
       return (
         <img
           key={playerID}
@@ -240,31 +246,43 @@ export default class GameBoard extends Component {
   }
 
   render() {
+    const override = css`
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      -ms-transform: translate(-50%, -50%);
+      z-index: 100;
+    `
     const colors = ['red', 'blue', 'green', 'yellow']
     return (
       <div className="container">
-        <ImageMapper
-          src={gameBoard}
-          map={this.MAP}
-          width={this.state.windowWidth}
-          imgWidth={this.originalImgWidth}
-          height={this.state.windowHeight}
-          imgHeight={this.originalImgHeight}
-          onClick={(area) => this.clicked(area)}
-          onMouseEnter={(area) => this.enterArea(area)}
-          onMouseLeave={() => this.leaveArea()}
-          strokeColor={colors[this.props.playerID]}
-          lineWidth={5}
-          hoveredAreas={this.getHoveredAreas(colors)}
-          paths={this.getPaths(colors)}
-        />
-        {this.state.hoveredArea && (
-          <span className="tooltip" style={{ ...this.getTipPosition(this.state.hoveredArea) }}>
-            {this.state.hoveredArea?.name}
-          </span>
-        )}
-        {this.renderPlayers()}
-        {this.renderHoursToken()}
+        <React.Fragment>
+          <ClockLoader css={override} size={100} color={'white'} loading={this.state.loadingImage} />
+          <ImageMapper
+            src={gameBoard}
+            map={this.MAP}
+            width={this.state.windowWidth}
+            imgWidth={this.originalImgWidth}
+            height={this.state.windowHeight}
+            imgHeight={this.originalImgHeight}
+            onLoad={() => this.state.loadingImage && this.setState({ loadingImage: false })}
+            onClick={(area) => this.clicked(area)}
+            onMouseEnter={(area) => this.enterArea(area)}
+            onMouseLeave={() => this.leaveArea()}
+            strokeColor={colors[this.props.playerID]}
+            lineWidth={5}
+            hoveredAreas={this.getHoveredAreas(colors)}
+            paths={this.getPaths(colors)}
+          />
+          {this.state.hoveredArea && (
+            <span className="tooltip" style={{ ...this.getTipPosition(this.state.hoveredArea) }}>
+              {this.state.hoveredArea?.name}
+            </span>
+          )}
+          {this.renderPlayers()}
+          {this.renderHoursToken()}
+        </React.Fragment>
       </div>
     )
   }

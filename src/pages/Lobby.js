@@ -10,8 +10,7 @@ import PlayerNameModal from '../modals/PlayerNameModal'
 import HeroSelectionModal from '../modals/HeroSelectionModal'
 import character from '../assets/images/characters/pictures/no_character.png'
 import { Icon } from 'semantic-ui-react'
-import { css } from '@emotion/core'
-import { ClockLoader, BarLoader } from 'react-spinners'
+import { ClockLoader } from 'react-spinners'
 
 export default () => {
   const { gameID } = useParams()
@@ -64,7 +63,7 @@ export default () => {
           .then(() => {
             setSelectedHero(newHero)
             updateCookie({ newHero })
-            setTimeout(() => setHeroLoader(false), 0.25 * 1000)
+            setTimeout(() => setHeroLoader(false), 0.45 * 1000)
           })
           .catch((e) => console.log('error', e))
       : setHeroLoader(false)
@@ -97,14 +96,6 @@ export default () => {
     backgroundSize: '100% 100%',
   }
 
-  const override = css`
-    position: absolute;
-    bottom: 5%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    -ms-transform: translate(-50%, -50%);
-  `
-
   return (
     <div className="lobby" style={divStyle}>
       <div className="header">
@@ -123,19 +114,15 @@ export default () => {
                   <div className="player" key={key}>
                     <div style={{ display: 'block', position: 'relative' }}>
                       <img className="player-image" alt="character" src={characterImage}></img>
-                      {playerID === player.id &&
-                        (heroLoader ? (
-                          <BarLoader
-                            css={override}
-                            size={50}
-                            color={['red', 'blue', 'green', 'yellow'][player.id]}
-                            loading={heroLoader}
-                          />
-                        ) : (
-                          <Button className="choose-character-button" onClick={() => setOpenHeroSelection(true)}>
-                            {selectedHero ? 'Switch' : 'Choose'} Hero
-                          </Button>
-                        ))}
+                      {playerID === player.id && (
+                        <Button
+                          loading={heroLoader}
+                          className="choose-character-button"
+                          onClick={() => setOpenHeroSelection(true)}
+                        >
+                          {selectedHero ? 'Switch' : 'Choose'} Hero
+                        </Button>
+                      )}
                     </div>
                     <div className="player-footer">
                       {'name' in player ? (

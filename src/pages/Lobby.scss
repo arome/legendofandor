@@ -34,7 +34,7 @@
         justify-content: space-between;
 
         .choose-character-button {
-          position: absolute;
+          position: absolute !important;
           bottom: 5%;
           left: 50%;
           transform: translate(-50%, -50%);
