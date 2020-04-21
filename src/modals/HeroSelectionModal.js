@@ -27,6 +27,7 @@ export default (props) => {
                 <Button
                   className="legend"
                   onClick={() => {
+                    props.setHeroLoader(true)
                     props.selectHero(hero)
                     props.handleClose()
                   }}

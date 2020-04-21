@@ -36,6 +36,7 @@
     "react-responsive-carousel": "^3.2.4",
     "react-router-dom": "^5.1.2",
     "react-scripts": "3.4.1",
+    "react-spinners": "^0.8.1",
     "redux-logger": "^3.0.6",
     "sass": "^1.26.3",
     "semantic-ui-react": "^0.88.2",

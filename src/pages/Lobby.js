@@ -10,6 +10,8 @@ import PlayerNameModal from '../modals/PlayerNameModal'
 import HeroSelectionModal from '../modals/HeroSelectionModal'
 import character from '../assets/images/characters/pictures/no_character.png'
 import { Icon } from 'semantic-ui-react'
+import { css } from '@emotion/core'
+import { ClockLoader, BarLoader } from 'react-spinners'
 
 export default () => {
   const { gameID } = useParams()
@@ -22,6 +24,8 @@ export default () => {
   const [openPlayerName, setOpenPlayerName] = useState(false)
   const [openHeroSelection, setOpenHeroSelection] = useState(false)
   const [selectedHero, setSelectedHero] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [heroLoader, setHeroLoader] = useState(false)
 
   const handleClosePlayerName = () => {
     setOpenPlayerName(false)
@@ -55,12 +59,15 @@ export default () => {
   }
 
   const updateHero = (newHero) => {
-    Axios.post(`${server}/games/${name}/${gameID}/setHero`, { playerID, credentials, newHero })
-      .then(() => {
-        setSelectedHero(newHero)
-        updateCookie({ newHero })
-      })
-      .catch((e) => console.log('error', e))
+    selectedHero !== newHero
+      ? Axios.post(`${server}/games/${name}/${gameID}/setHero`, { playerID, credentials, newHero })
+          .then(() => {
+            setSelectedHero(newHero)
+            updateCookie({ newHero })
+            setTimeout(() => setHeroLoader(false), 0.25 * 1000)
+          })
+          .catch((e) => console.log('error', e))
+      : setHeroLoader(false)
   }
 
   useEffect(() => {
@@ -75,6 +82,7 @@ export default () => {
       Axios.get(`${server}/games/${name}/${gameID}/moreData`).then((res) => {
         setPlayers(res.data.players)
         setSetupData(res.data.setupData)
+        setLoading(false)
       })
     }, 1000)
     return () => {
@@ -89,69 +97,91 @@ export default () => {
     backgroundSize: '100% 100%',
   }
 
+  const override = css`
+    position: absolute;
+    bottom: 5%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    -ms-transform: translate(-50%, -50%);
+  `
+
   return (
     <div className="lobby" style={divStyle}>
       <div className="header">
         <h1>Room ID : {gameID}</h1>
       </div>
       <div className="content">
-        <div className="players">
-          {players.map((player, key) => {
-            const characterImage =
-              'hero' in player ? require(`../assets/images/characters/pictures/${player.hero}.jpg`) : character
-            return (
-              <div className="player" key={key}>
-                <div style={{ display: 'block', position: 'relative' }}>
-                  <img className="player-image" alt="character" src={characterImage}></img>
-                  {playerID === player.id && (
-                    <Button className="choose-character-button" onClick={() => setOpenHeroSelection(true)}>
-                      {selectedHero ? 'Switch' : 'Choose'} Hero
-                    </Button>
-                  )}
-                </div>
-                <div className="player-footer">
-                  {'name' in player ? (
-                    <React.Fragment>
-                      <h3>{player.name}</h3>
-                      <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
-                    </React.Fragment>
-                  ) : playerID === null ? (
-                    <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(player.id)}>
-                      Join as player {player.id + 1}
-                      <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
-                    </Button>
-                  ) : (
-                    <React.Fragment>
-                      <h3>Waiting for others...</h3>
-                      <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
-                    </React.Fragment>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-        {playerID !== null ? (
-          selectedHero ? (
-            <Button
-              className="start-game-button"
-              onClick={() =>
-                history.push('/start-game', {
-                  playerID,
-                  gameID,
-                  credentials,
-                  numPlayers: players.length,
-                  selectedHero,
-                })
-              }
-            >
-              Start Game
-            </Button>
-          ) : (
-            <h2>Please Select Your Hero</h2>
-          )
+        {loading ? (
+          <ClockLoader size={100} color={'white'} loading={loading} />
         ) : (
-          <h2>Please Select Your Player</h2>
+          <React.Fragment>
+            <div className="players">
+              {players.map((player, key) => {
+                const characterImage =
+                  'hero' in player ? require(`../assets/images/characters/pictures/${player.hero}.jpg`) : character
+                return (
+                  <div className="player" key={key}>
+                    <div style={{ display: 'block', position: 'relative' }}>
+                      <img className="player-image" alt="character" src={characterImage}></img>
+                      {playerID === player.id &&
+                        (heroLoader ? (
+                          <BarLoader
+                            css={override}
+                            size={50}
+                            color={['red', 'blue', 'green', 'yellow'][player.id]}
+                            loading={heroLoader}
+                          />
+                        ) : (
+                          <Button className="choose-character-button" onClick={() => setOpenHeroSelection(true)}>
+                            {selectedHero ? 'Switch' : 'Choose'} Hero
+                          </Button>
+                        ))}
+                    </div>
+                    <div className="player-footer">
+                      {'name' in player ? (
+                        <React.Fragment>
+                          <h3>{player.name}</h3>
+                          <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
+                        </React.Fragment>
+                      ) : playerID === null ? (
+                        <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(player.id)}>
+                          Join as player {player.id + 1}
+                          <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
+                        </Button>
+                      ) : (
+                        <React.Fragment>
+                          <h3>Waiting for others...</h3>
+                          <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
+                        </React.Fragment>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {playerID !== null ? (
+              selectedHero ? (
+                <Button
+                  className="start-game-button"
+                  onClick={() =>
+                    history.push('/start-game', {
+                      playerID,
+                      gameID,
+                      credentials,
+                      numPlayers: players.length,
+                      selectedHero,
+                    })
+                  }
+                >
+                  Start Game
+                </Button>
+              ) : (
+                <h2>Please Select Your Hero</h2>
+              )
+            ) : (
+              <h2>Please Select Your Player</h2>
+            )}
+          </React.Fragment>
         )}
       </div>
       <PlayerNameModal
@@ -160,7 +190,12 @@ export default () => {
         joinGame={joinGame}
         playerID={playerID}
       />
-      <HeroSelectionModal open={openHeroSelection} handleClose={handleCloseHeroSelection} selectHero={updateHero} />
+      <HeroSelectionModal
+        open={openHeroSelection}
+        handleClose={handleCloseHeroSelection}
+        selectHero={updateHero}
+        setHeroLoader={setHeroLoader}
+      />
     </div>
   )
 }

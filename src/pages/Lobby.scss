@@ -2,11 +2,16 @@
   padding: 0 5vw;
   color: white;
   font-size: 2vh;
-
   .header {
     padding: 30px;
     height: 10vh;
   }
+  .loader {
+    display: block;
+    margin: 0 auto;
+    border-color: red;
+  }
+  
   .content {
     display: flex;
     justify-content: center;
