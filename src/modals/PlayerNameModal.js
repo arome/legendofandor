@@ -13,7 +13,7 @@ export default (props) => {
   }
 
   return (
-    <Modal className="player-name-modal" open={props.open} onClose={() => props.handleClose()} closeIcon>
+    <Modal size="mini" className="player-name-modal" open={props.open} onClose={() => props.handleClose()} closeIcon>
       <Modal.Header>Player Name</Modal.Header>
       <Modal.Content>
         <Form onSubmit={handleSubmit}>

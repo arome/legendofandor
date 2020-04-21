@@ -21,7 +21,7 @@ const CreateGameModal = (props) => {
   }
 
   return (
-    <Modal className="create-game-modal" open={props.open} onClose={() => props.handleClose()} closeIcon>
+    <Modal size="mini" className="create-game-modal" open={props.open} onClose={() => props.handleClose()} closeIcon>
       <Modal.Header>Create a New Game</Modal.Header>
       <Modal.Content>
         <Form onSubmit={handleSubmit}>
