@@ -6,7 +6,10 @@ import './Board.scss'
 import tiles from './tiles'
 import Swal from 'sweetalert2'
 import { css } from '@emotion/core'
+import { Icon } from 'semantic-ui-react'
 import { ClockLoader } from 'react-spinners'
+import { Fab, Action } from 'react-tiny-fab'
+import 'react-tiny-fab/dist/styles.css'
 
 export default class GameBoard extends Component {
   MAP
@@ -256,7 +259,7 @@ export default class GameBoard extends Component {
     `
     const colors = ['red', 'blue', 'green', 'yellow']
     return (
-      <div className="container">
+      <div className="board">
         <React.Fragment>
           <ClockLoader css={override} size={100} color={'white'} loading={this.state.loadingImage} />
           <ImageMapper
@@ -282,6 +285,28 @@ export default class GameBoard extends Component {
           )}
           {this.renderPlayers()}
           {this.renderHoursToken()}
+          <Fab
+            mainButtonStyles={{ backgroundColor: colors[this.props.playerID] }}
+            actionButtonStyles={{ backgroundColor: colors[this.props.playerID] }}
+            position={{ bottom: 50, right: 50 }}
+            icon={<Icon name="add" />}
+            // event={event}
+            alwaysShowTitle={true}
+            // onClick={someFunctionForTheMainButton}
+          >
+            <Action text="Drink" onClick={() => console.log('drinking')}>
+              <Icon name="glass martini" />
+            </Action>
+            <Action text="Collect" onClick={() => console.log('collecting coins')}>
+              <Icon name="usd" />
+            </Action>
+            <Action text="End Turn" onClick={() => console.log('ending turn')}>
+              <Icon name="flag checkered" />
+            </Action>
+            <Action text="End Day" onClick={() => console.log('ending day')}>
+              <Icon name="bed" />
+            </Action>
+          </Fab>
         </React.Fragment>
       </div>
     )
