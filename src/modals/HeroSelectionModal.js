@@ -31,7 +31,7 @@ export default (props) => {
                     props.handleClose()
                   }}
                 >
-                  Select {heroGender} {heroType}
+                  Select {heroType} <i className={`${heroGender === 'Male' ? 'man' : 'woman'} icon`}></i>
                 </Button>
               </div>
             )

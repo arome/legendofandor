@@ -18,7 +18,6 @@ server.app.use(mount('/', static_pages)) //serve the build directory
 
 const router = new Router()
 router.post('/games/:name/:id/setHero', koaBody(), async (ctx) => {
-  console.log("I'm here!", ctx.request.body)
   const gameID = ctx.params.id
   const playerID = ctx.request.body.playerID
   const credentials = ctx.request.body.credentials
