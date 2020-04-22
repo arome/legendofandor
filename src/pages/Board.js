@@ -9,6 +9,7 @@ import { css } from '@emotion/core'
 import { Icon } from 'semantic-ui-react'
 import { ClockLoader } from 'react-spinners'
 import { Fab, Action } from 'react-tiny-fab'
+import { playersColor } from '../common'
 import 'react-tiny-fab/dist/styles.css'
 
 export default class GameBoard extends Component {
@@ -19,9 +20,7 @@ export default class GameBoard extends Component {
   constructor(props) {
     super(props)
     this.playersToken = {}
-    ;['red', 'blue', 'green', 'yellow'].map(
-      (color, index) => (this.playersToken[index] = require(`../assets/images/tokens/${color}.png`))
-    )
+    playersColor.map((color, index) => (this.playersToken[index] = require(`../assets/images/tokens/${color}.png`)))
     this.MAP = {
       name: 'my-map',
       areas: tiles.graph.vertices.map((vertice) => {
@@ -171,37 +170,37 @@ export default class GameBoard extends Component {
     return [x, y]
   }
 
-  getPaths(colors) {
+  getPaths(playersColor) {
     const numPlayers = Object.keys(this.props.G.players).length
     const paths = []
     for (let i = 0; i < numPlayers; i++)
       if (i !== parseInt(this.props.playerID))
         paths.push({
-          circle: { color: colors[i], radius: 10 },
-          line: { color: colors[i] },
+          circle: { color: playersColor[i], radius: 10 },
+          line: { color: playersColor[i] },
           steps: this.props.G.players[i].path,
         })
     paths.push({
-      circle: { color: colors[this.props.playerID], radius: 10 },
-      line: { color: colors[this.props.playerID] },
+      circle: { color: playersColor[this.props.playerID], radius: 10 },
+      line: { color: playersColor[this.props.playerID] },
       steps: this.props.G.players[this.props.playerID].path,
     })
     return paths
   }
 
-  getHoveredAreas(colors) {
+  getHoveredAreas(playersColor) {
     const numPlayers = this.props.G.players.length
     const hoveredAreas = []
     for (let i = 0; i < numPlayers; i++) {
       const hoveredArea = this.props.G.players[i].hoveredArea
       if (i !== parseInt(this.props.playerID) && hoveredArea)
-        hoveredAreas.push({ ...hoveredArea, strokeColor: colors[i], _id: i })
+        hoveredAreas.push({ ...hoveredArea, strokeColor: playersColor[i], _id: i })
     }
     const myHoveredArea = this.props.G.players[this.props.playerID].hoveredArea
     myHoveredArea &&
       hoveredAreas.push({
         ...myHoveredArea,
-        strokeColor: colors[this.props.playerID],
+        strokeColor: playersColor[this.props.playerID],
         _id: this.props.playerID,
       })
     return hoveredAreas
@@ -257,7 +256,6 @@ export default class GameBoard extends Component {
       -ms-transform: translate(-50%, -50%);
       z-index: 100;
     `
-    const colors = ['red', 'blue', 'green', 'yellow']
     return (
       <div className="board">
         <React.Fragment>
@@ -273,10 +271,10 @@ export default class GameBoard extends Component {
             onClick={(area) => this.clicked(area)}
             onMouseEnter={(area) => this.enterArea(area)}
             onMouseLeave={() => this.leaveArea()}
-            strokeColor={colors[this.props.playerID]}
+            strokeColor={playersColor[this.props.playerID]}
             lineWidth={5}
-            hoveredAreas={this.getHoveredAreas(colors)}
-            paths={this.getPaths(colors)}
+            hoveredAreas={this.getHoveredAreas(playersColor)}
+            paths={this.getPaths(playersColor)}
           />
           {this.state.hoveredArea && (
             <span className="tooltip" style={{ ...this.getTipPosition(this.state.hoveredArea) }}>
@@ -286,8 +284,8 @@ export default class GameBoard extends Component {
           {this.renderPlayers()}
           {this.renderHoursToken()}
           <Fab
-            mainButtonStyles={{ backgroundColor: colors[this.props.playerID] }}
-            actionButtonStyles={{ backgroundColor: colors[this.props.playerID] }}
+            mainButtonStyles={{ backgroundColor: playersColor[this.props.playerID] }}
+            actionButtonStyles={{ backgroundColor: playersColor[this.props.playerID] }}
             position={{ bottom: 50, right: 50 }}
             icon={<Icon name="add" />}
             // event={event}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import background from '../assets/images/Lobby.jpg'
 import Cookies from 'react-cookies'
 import Axios from 'axios'
-import { server, name } from '../common'
+import { server, name, playersColor } from '../common'
 import { useParams, useHistory } from 'react-router-dom'
 import './Lobby.scss'
 import { Button } from 'semantic-ui-react'
@@ -128,17 +128,17 @@ export default () => {
                       {'name' in player ? (
                         <React.Fragment>
                           <h3>{player.name}</h3>
-                          <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
+                          <Icon name="circle" size="tiny" color={playersColor[player.id]} />
                         </React.Fragment>
                       ) : playerID === null ? (
                         <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(player.id)}>
                           Join as player {player.id + 1}
-                          <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
+                          <Icon name="circle" size="tiny" color={playersColor[player.id]} />
                         </Button>
                       ) : (
                         <React.Fragment>
                           <h3>Waiting for others...</h3>
-                          <Icon name="circle" size="tiny" color={['red', 'blue', 'green', 'yellow'][player.id]} />
+                          <Icon name="circle" size="tiny" color={playersColor[player.id]} />
                         </React.Fragment>
                       )}
                     </div>
