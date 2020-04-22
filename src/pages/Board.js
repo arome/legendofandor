@@ -1,7 +1,6 @@
 import React, { Component } from 'react'
 import ImageMapper from 'react-image-mapper'
 import gameBoard from '../assets/images/Andor_Board.jpg'
-import character from '../assets/images/characters/pawns/Archer_male.png'
 import './Board.scss'
 import tiles from './tiles'
 import Swal from 'sweetalert2'
@@ -9,7 +8,7 @@ import { css } from '@emotion/core'
 import { Icon } from 'semantic-ui-react'
 import { ClockLoader } from 'react-spinners'
 import { Fab, Action } from 'react-tiny-fab'
-import { playersColor } from '../common'
+import { separator, heroesColor } from '../common'
 import 'react-tiny-fab/dist/styles.css'
 
 export default class GameBoard extends Component {
@@ -19,8 +18,17 @@ export default class GameBoard extends Component {
   originalImgWidth = 9861
   constructor(props) {
     super(props)
+    this.playerCharacters = {}
+    this.playersColor = []
+    Object.keys(this.props.gameMetadata).forEach((player) => {
+      const heroName = this.props.gameMetadata[player].name.split(separator)[1]
+      this.playerCharacters[player] = require(`../assets/images/characters/pawns/${heroName}.png`)
+      this.playersColor.push(heroesColor[heroName])
+    })
     this.playersToken = {}
-    playersColor.map((color, index) => (this.playersToken[index] = require(`../assets/images/tokens/${color}.png`)))
+    this.playersColor.map(
+      (color, index) => (this.playersToken[index] = require(`../assets/images/tokens/${color}.png`))
+    )
     this.MAP = {
       name: 'my-map',
       areas: tiles.graph.vertices.map((vertice) => {
@@ -154,6 +162,8 @@ export default class GameBoard extends Component {
 
   computeCenter(area) {
     if (!area) return [0, 0]
+    console.log('this.props', this.props)
+    console.log('area', area)
     const scaledCoords = area.coords.map((coord, index) =>
       index % 2 === 1
         ? (coord * this.state.windowHeight) / this.originalImgHeight
@@ -170,37 +180,37 @@ export default class GameBoard extends Component {
     return [x, y]
   }
 
-  getPaths(playersColor) {
+  getPaths() {
     const numPlayers = Object.keys(this.props.G.players).length
     const paths = []
     for (let i = 0; i < numPlayers; i++)
       if (i !== parseInt(this.props.playerID))
         paths.push({
-          circle: { color: playersColor[i], radius: 10 },
-          line: { color: playersColor[i] },
+          circle: { color: this.playersColor[i], radius: 10 },
+          line: { color: this.playersColor[i] },
           steps: this.props.G.players[i].path,
         })
     paths.push({
-      circle: { color: playersColor[this.props.playerID], radius: 10 },
-      line: { color: playersColor[this.props.playerID] },
+      circle: { color: this.playersColor[this.props.playerID], radius: 10 },
+      line: { color: this.playersColor[this.props.playerID] },
       steps: this.props.G.players[this.props.playerID].path,
     })
     return paths
   }
 
-  getHoveredAreas(playersColor) {
+  getHoveredAreas() {
     const numPlayers = this.props.G.players.length
     const hoveredAreas = []
     for (let i = 0; i < numPlayers; i++) {
       const hoveredArea = this.props.G.players[i].hoveredArea
       if (i !== parseInt(this.props.playerID) && hoveredArea)
-        hoveredAreas.push({ ...hoveredArea, strokeColor: playersColor[i], _id: i })
+        hoveredAreas.push({ ...hoveredArea, strokeColor: this.playersColor[i], _id: i })
     }
     const myHoveredArea = this.props.G.players[this.props.playerID].hoveredArea
     myHoveredArea &&
       hoveredAreas.push({
         ...myHoveredArea,
-        strokeColor: playersColor[this.props.playerID],
+        strokeColor: this.playersColor[this.props.playerID],
         _id: this.props.playerID,
       })
     return hoveredAreas
@@ -214,7 +224,7 @@ export default class GameBoard extends Component {
       return (
         <img
           key={playerID}
-          src={character}
+          src={this.playerCharacters[playerID]}
           alt="character"
           className="character"
           style={{
@@ -271,10 +281,10 @@ export default class GameBoard extends Component {
             onClick={(area) => this.clicked(area)}
             onMouseEnter={(area) => this.enterArea(area)}
             onMouseLeave={() => this.leaveArea()}
-            strokeColor={playersColor[this.props.playerID]}
+            strokeColor={this.playersColor[this.props.playerID]}
             lineWidth={5}
-            hoveredAreas={this.getHoveredAreas(playersColor)}
-            paths={this.getPaths(playersColor)}
+            hoveredAreas={this.getHoveredAreas()}
+            paths={this.getPaths()}
           />
           {this.state.hoveredArea && (
             <span className="tooltip" style={{ ...this.getTipPosition(this.state.hoveredArea) }}>
@@ -284,8 +294,8 @@ export default class GameBoard extends Component {
           {this.renderPlayers()}
           {this.renderHoursToken()}
           <Fab
-            mainButtonStyles={{ backgroundColor: playersColor[this.props.playerID] }}
-            actionButtonStyles={{ backgroundColor: playersColor[this.props.playerID] }}
+            mainButtonStyles={{ backgroundColor: this.playersColor[this.props.playerID] }}
+            actionButtonStyles={{ backgroundColor: this.playersColor[this.props.playerID] }}
             position={{ bottom: 50, right: 50 }}
             icon={<Icon name="add" />}
             // event={event}
