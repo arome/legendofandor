@@ -56,7 +56,7 @@ export default class GameBoard extends Component {
       loadingImage: true,
     }
 
-    !this.G.init && this.props.moves.setupData(heroeslist)
+    !this.props.G.init && this.props.moves.setupData(heroeslist)
   }
 
   handleResize = () =>
