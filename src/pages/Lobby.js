@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import background from '../assets/images/Lobby.jpg'
 import Cookies from 'react-cookies'
 import Axios from 'axios'
-import { server, name, playersColor, separator } from '../common'
+import { server, name, separator } from '../common'
 import { useParams, useHistory } from 'react-router-dom'
 import './Lobby.scss'
 import { Button } from 'semantic-ui-react'
@@ -19,7 +19,6 @@ export default () => {
   const [playerID, setPlayerID] = useState(null)
   const [players, setPlayers] = useState([])
   const [credentials, setCredentials] = useState('')
-  const [setupData, setSetupData] = useState({})
   const [openPlayerName, setOpenPlayerName] = useState(false)
   const [openHeroSelection, setOpenHeroSelection] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -99,7 +98,6 @@ export default () => {
     const interval = setInterval(() => {
       Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
         setPlayers(res.data.players)
-        setSetupData(res.data.setupData)
         setLoading(false)
       })
     }, 1000)

@@ -1,10 +1,8 @@
-import LOA from '../game'
-
-const hostname = window.location.hostname
+const hostname = typeof window !== 'undefined' && window.location.hostname
 const PORT = process.env.PORT || 8000
 export const server = hostname === 'localhost' ? `http://${hostname}:${PORT}` : `https://${hostname}`
 // export const server = 'https://legendofandor.herokuapp.com'
-export const name = LOA.name
+export const name = 'legend-of-andor'
 export const heroes = {
   Archer_female: {
     color: 'green',

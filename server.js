@@ -4,9 +4,6 @@ import path from 'path'
 import Koa from 'koa'
 import serve from 'koa-static'
 import mount from 'koa-mount'
-import Router from 'koa-router'
-import koaBody from 'koa-body'
-import cors from '@koa/cors'
 
 const PORT = process.env.PORT || 8000
 const server = Server({ games: [LegendOfAndor] })

@@ -18,10 +18,12 @@ export default class GameBoard extends Component {
   originalImgWidth = 9861
   constructor(props) {
     super(props)
+    const heroeslist = []
     this.playerCharacters = {}
     this.playersColor = []
     Object.keys(this.props.gameMetadata).forEach((player) => {
       const heroName = this.props.gameMetadata[player].name.split(separator)[1]
+      heroeslist.push(heroName)
       this.playerCharacters[player] = require(`../assets/images/characters/pawns/${heroName}.png`)
       this.playersColor.push(heroes[heroName].color)
     })
@@ -53,6 +55,8 @@ export default class GameBoard extends Component {
       windowHeight: window.innerHeight,
       loadingImage: true,
     }
+
+    !this.G.init && this.props.moves.setupData(heroeslist)
   }
 
   handleResize = () =>

@@ -1,5 +1,6 @@
 import tiles from './pages/tiles'
 import { Stage } from 'boardgame.io/core'
+import { heroes, name } from './common'
 
 function distance(from, to) {
   var iDiff = from.data.i - to.data.i
@@ -69,7 +70,7 @@ const allPlayersMove = {
 }
 
 const LegendOfAndor = {
-  name: 'legend-of-andor',
+  name,
   minPlayers: 2,
   maxPlayers: 4,
 
@@ -78,8 +79,8 @@ const LegendOfAndor = {
     for (let i = 0; i < ctx.numPlayers; i++) {
       players[i] = {
         hoursPassed: 0,
-        nbOfDice: 2,
-        specialAbility: 'none',
+        numDice: 2,
+        specialAbilities: { Bait: false, ProxyAttack: false, WellPower: false, FlipDice: false },
         strength: 1,
         willpower: 7,
         positionOnMap: 0,
@@ -94,6 +95,7 @@ const LegendOfAndor = {
       legend: 1,
       letter: 'A',
       players,
+      init: false
     }
   },
 
@@ -106,6 +108,8 @@ const LegendOfAndor = {
       ctx.events.endTurn()
     },
     fight(G, ctx, id) {},
+    drink(G, ctx, id) {},
+    setupData(G, ctx, setupData) {},
   },
 
   turn: {
@@ -121,6 +125,26 @@ const LegendOfAndor = {
         },
       },
     },
+  },
+
+  phases: {
+    initialisation: {
+      moves: {
+        setupData(G, ctx, heroeslist) {
+          Object.keys(G.players).forEach((pos) => {
+            const hero = heroes[heroeslist[pos]]
+            G.players[pos].numDice = hero.numDice
+            G.players[pos].specialAbilities[hero.specialAbility] = true
+            G.init = true
+          })
+        },
+      },
+      endIf: (G) => G.init,
+      next: 'play',
+      start: true,
+    },
+
+    play: {},
   },
 
   endIf: (G, ctx) => {
