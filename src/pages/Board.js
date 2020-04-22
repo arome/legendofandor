@@ -162,8 +162,6 @@ export default class GameBoard extends Component {
 
   computeCenter(area) {
     if (!area) return [0, 0]
-    console.log('this.props', this.props)
-    console.log('area', area)
     const scaledCoords = area.coords.map((coord, index) =>
       index % 2 === 1
         ? (coord * this.state.windowHeight) / this.originalImgHeight
@@ -249,7 +247,7 @@ export default class GameBoard extends Component {
           src={this.playersToken[playerID]}
           className="character"
           style={{
-            ...this.getTokenPosition({ coords: tiles.hours[hoursPassed] }, playerID),
+            ...this.getTokenPosition({ coords: tiles.hours[Math.min(hoursPassed, 10)] }, playerID),
             ...this.getTokenSize(),
           }}
         />
