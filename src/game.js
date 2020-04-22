@@ -78,14 +78,10 @@ const LegendOfAndor = {
     for (let i = 0; i < ctx.numPlayers; i++) {
       players[i] = {
         hoursPassed: 0,
-        health: 10,
-        attack: 10,
-        move: 1,
         nbOfDice: 2,
         specialAbility: 'none',
         strength: 1,
         willpower: 7,
-        rank: 7,
         positionOnMap: 0,
         hoveredArea: null,
         path: [],

@@ -8,7 +8,7 @@ import { css } from '@emotion/core'
 import { Icon } from 'semantic-ui-react'
 import { ClockLoader } from 'react-spinners'
 import { Fab, Action } from 'react-tiny-fab'
-import { separator, heroesColor } from '../common'
+import { separator, heroes } from '../common'
 import 'react-tiny-fab/dist/styles.css'
 
 export default class GameBoard extends Component {
@@ -23,7 +23,7 @@ export default class GameBoard extends Component {
     Object.keys(this.props.gameMetadata).forEach((player) => {
       const heroName = this.props.gameMetadata[player].name.split(separator)[1]
       this.playerCharacters[player] = require(`../assets/images/characters/pawns/${heroName}.png`)
-      this.playersColor.push(heroesColor[heroName])
+      this.playersColor.push(heroes[heroName].color)
     })
     this.playersToken = {}
     this.playersColor.map(
