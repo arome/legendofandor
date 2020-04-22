@@ -115,27 +115,26 @@ export default () => {
     backgroundSize: '100% 100%',
   }
 
-  const displayPlayerFooter = (id, name) => {
+  const displayPlayerFooter = (id, name, ready) => {
     let footer
     if (name)
       footer = (
         <React.Fragment>
           <h3>{name}</h3>
-          <Icon name="circle" size="tiny" color={playersColor[id]} />
+          <Icon name="circle" size="tiny" color={ready ? 'green' : 'red'} />
         </React.Fragment>
       )
     else if (playerID === null)
       footer = (
         <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(id)}>
           Join as player {id + 1}
-          <Icon name="circle" size="tiny" color={playersColor[id]} />
         </Button>
       )
     else
       footer = (
         <React.Fragment>
           <h3>Waiting for others...</h3>
-          <Icon name="circle" size="tiny" color={playersColor[id]} />
+          <Icon name="circle" size="tiny" color={ready ? 'green' : 'red'} />
         </React.Fragment>
       )
     return footer
@@ -199,7 +198,7 @@ export default () => {
                         </Button>
                       )}
                     </div>
-                    <div className="player-footer">{displayPlayerFooter(player.id, name)}</div>
+                    <div className="player-footer">{displayPlayerFooter(player.id, name, ready)}</div>
                   </div>
                 )
               })}
