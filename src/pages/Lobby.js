@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import background from '../assets/images/Lobby.jpg'
 import Cookies from 'react-cookies'
 import Axios from 'axios'
-import { server, name, playersColor } from '../common'
+import { server, name, playersColor, separator } from '../common'
 import { useParams, useHistory } from 'react-router-dom'
 import './Lobby.scss'
 import { Button } from 'semantic-ui-react'
@@ -22,7 +22,6 @@ export default () => {
   const [setupData, setSetupData] = useState({})
   const [openPlayerName, setOpenPlayerName] = useState(false)
   const [openHeroSelection, setOpenHeroSelection] = useState(false)
-  const [selectedHero, setSelectedHero] = useState(null)
   const [loading, setLoading] = useState(true)
   const [heroLoader, setHeroLoader] = useState(false)
 
@@ -53,20 +52,41 @@ export default () => {
     Axios.post(`${server}/games/${name}/${gameID}/join`, { playerID, playerName }).then((res) => {
       const credentials = res.data.playerCredentials
       setCredentials(credentials)
-      updateCookie({ credentials, playerID })
+      setPlayerName(playerName)
+      updateCookie({ credentials, playerID, playerName })
     })
   }
 
   const updateHero = (newHero) => {
-    selectedHero !== newHero
-      ? Axios.post(`${server}/games/${name}/${gameID}/setHero`, { playerID, credentials, newHero })
-          .then(() => {
-            setSelectedHero(newHero)
-            updateCookie({ newHero })
-            setTimeout(() => setHeroLoader(false), 0.45 * 1000)
-          })
-          .catch((e) => console.log('error', e))
-      : setHeroLoader(false)
+    const [name, hero] = playerName.split(separator)
+    if (hero !== newHero) {
+      const newName = `${name}${separator}${newHero}`
+      Axios.post(`${server}/games/${name}/${gameID}/rename`, {
+        playerID,
+        credentials,
+        newName,
+      })
+        .then(() => {
+          setPlayerName(newName)
+          updateCookie({ playerName: newName })
+          setTimeout(() => setHeroLoader(false), 0.45 * 1000)
+        })
+        .catch((e) => console.log('error', e))
+    } else setHeroLoader(false)
+  }
+
+  const startGame = () => {
+    const newName = `${playerName}${separator}yes`
+    Axios.post(`${server}/games/${name}/${gameID}/rename`, {
+      playerID,
+      credentials,
+      newName,
+    })
+      .then(() => {
+        setPlayerName(newName)
+        updateCookie({ playerName: newName })
+      })
+      .catch((e) => console.log('error', e))
   }
 
   useEffect(() => {
@@ -74,11 +94,10 @@ export default () => {
     if (gameID in browserCookie) {
       setPlayerName(browserCookie[gameID].playerName)
       setCredentials(browserCookie[gameID].credentials)
-      setSelectedHero(browserCookie[gameID].newHero)
       setPlayerID(browserCookie[gameID].playerID)
     }
     const interval = setInterval(() => {
-      Axios.get(`${server}/games/${name}/${gameID}/moreData`).then((res) => {
+      Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
         setPlayers(res.data.players)
         setSetupData(res.data.setupData)
         setLoading(false)
@@ -96,6 +115,61 @@ export default () => {
     backgroundSize: '100% 100%',
   }
 
+  const displayPlayerFooter = (id, name) => {
+    let footer
+    if (name)
+      footer = (
+        <React.Fragment>
+          <h3>{name}</h3>
+          <Icon name="circle" size="tiny" color={playersColor[id]} />
+        </React.Fragment>
+      )
+    else if (playerID === null)
+      footer = (
+        <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(id)}>
+          Join as player {id + 1}
+          <Icon name="circle" size="tiny" color={playersColor[id]} />
+        </Button>
+      )
+    else
+      footer = (
+        <React.Fragment>
+          <h3>Waiting for others...</h3>
+          <Icon name="circle" size="tiny" color={playersColor[id]} />
+        </React.Fragment>
+      )
+    return footer
+  }
+
+  const displayStatus = () => {
+    let status
+    if (playerID !== null) {
+      if (playerName.split(separator).length >= 2) {
+        status = (
+          <Button
+            loading={playerName.split(separator).length === 3}
+            className="start-game-button"
+            onClick={() => startGame()}
+          >
+            Start Game
+          </Button>
+        )
+      } else status = <h1>Please Select Your Hero</h1>
+    } else status = <h1>Please Select Your Player</h1>
+    return status
+  }
+
+  const playersReady = players.map((player) => player.name && player.name.split(separator).length === 3)
+  let ready = playersReady.length > 0 && playersReady.every((v) => v)
+
+  ready &&
+    history.push('/start-game', {
+      playerID,
+      gameID,
+      credentials,
+      numPlayers: players.length,
+    })
+
   return (
     <div className="lobby" style={divStyle}>
       <div className="header">
@@ -107,11 +181,12 @@ export default () => {
         ) : (
           <React.Fragment>
             <div className="players">
-              {players.map((player, key) => {
-                const characterImage =
-                  'hero' in player ? require(`../assets/images/characters/pictures/${player.hero}.jpg`) : character
+              {players.map((player) => {
+                const [name, hero, ready] =
+                  'name' in player ? player.name.split(separator) : [undefined, undefined, undefined]
+                const characterImage = hero ? require(`../assets/images/characters/pictures/${hero}.jpg`) : character
                 return (
-                  <div className="player" key={key}>
+                  <div className="player" key={player.id}>
                     <div style={{ display: 'block', position: 'relative' }}>
                       <img className="player-image" alt="character" src={characterImage}></img>
                       {playerID === player.id && (
@@ -120,54 +195,16 @@ export default () => {
                           className="choose-character-button"
                           onClick={() => setOpenHeroSelection(true)}
                         >
-                          {selectedHero ? 'Switch' : 'Choose'} Hero
+                          {hero ? 'Switch' : 'Choose'} Hero
                         </Button>
                       )}
                     </div>
-                    <div className="player-footer">
-                      {'name' in player ? (
-                        <React.Fragment>
-                          <h3>{player.name}</h3>
-                          <Icon name="circle" size="tiny" color={playersColor[player.id]} />
-                        </React.Fragment>
-                      ) : playerID === null ? (
-                        <Button style={{ marginTop: '15px' }} onClick={() => getPlayerName(player.id)}>
-                          Join as player {player.id + 1}
-                          <Icon name="circle" size="tiny" color={playersColor[player.id]} />
-                        </Button>
-                      ) : (
-                        <React.Fragment>
-                          <h3>Waiting for others...</h3>
-                          <Icon name="circle" size="tiny" color={playersColor[player.id]} />
-                        </React.Fragment>
-                      )}
-                    </div>
+                    <div className="player-footer">{displayPlayerFooter(player.id, name)}</div>
                   </div>
                 )
               })}
             </div>
-            {playerID !== null ? (
-              selectedHero ? (
-                <Button
-                  className="start-game-button"
-                  onClick={() =>
-                    history.push('/start-game', {
-                      playerID,
-                      gameID,
-                      credentials,
-                      numPlayers: players.length,
-                      selectedHero,
-                    })
-                  }
-                >
-                  Start Game
-                </Button>
-              ) : (
-                <h2>Please Select Your Hero</h2>
-              )
-            ) : (
-              <h2>Please Select Your Player</h2>
-            )}
+            {displayStatus()}
           </React.Fragment>
         )}
       </div>
