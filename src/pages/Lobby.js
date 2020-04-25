@@ -97,14 +97,25 @@ export default () => {
     }
     const interval = setInterval(() => {
       Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
-        setPlayers(res.data.players)
+        const players = res.data.players
+        const playersReady = players.map((player) => player.name && player.name.split(separator).length === 3)
+        let ready = playersReady.length > 0 && playersReady.every((v) => v)
+
+        ready &&
+          history.push('/start-game', {
+            playerID,
+            gameID,
+            credentials,
+            numPlayers: players.length,
+          })
+        setPlayers(players)
         setLoading(false)
       })
     }, 1000)
     return () => {
       clearInterval(interval)
     }
-  }, [gameID])
+  }, [gameID, history, playerID, credentials])
 
   const divStyle = {
     width: '100vw',
@@ -155,17 +166,6 @@ export default () => {
     } else status = <h1>Please Select Your Player</h1>
     return status
   }
-
-  const playersReady = players.map((player) => player.name && player.name.split(separator).length === 3)
-  let ready = playersReady.length > 0 && playersReady.every((v) => v)
-
-  ready &&
-    history.push('/start-game', {
-      playerID,
-      gameID,
-      credentials,
-      numPlayers: players.length,
-    })
 
   return (
     <div className="lobby" style={divStyle}>
