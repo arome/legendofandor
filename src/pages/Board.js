@@ -9,6 +9,9 @@ import { Icon } from 'semantic-ui-react'
 import { ClockLoader } from 'react-spinners'
 import { Fab, Action } from 'react-tiny-fab'
 import { separator, heroes } from '../common'
+import { RiSwordLine, RiHandCoinLine } from 'react-icons/ri'
+import { IoIosWater } from 'react-icons/io'
+import DicesWindow from '../modals/DiceWindow'
 import 'react-tiny-fab/dist/styles.css'
 
 export default class GameBoard extends Component {
@@ -54,6 +57,7 @@ export default class GameBoard extends Component {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
       loadingImage: true,
+      openDice: false,
     }
 
     !this.props.G.init && this.props.moves.setupData(heroeslist)
@@ -77,12 +81,14 @@ export default class GameBoard extends Component {
     this.props.moves.setHoveredArea(area)
   }
 
+  isActivePlayer = () => this.props.playerID === this.props.ctx.currentPlayer
+
   clicked(area) {
     const to = parseInt(area.name)
     const myPath = this.props.G.players[this.props.playerID].path
     const lastSelected = myPath.length > 0 ? myPath[myPath.length - 1][1] : null
     lastSelected === to
-      ? this.props.playerID === this.props.ctx.currentPlayer &&
+      ? this.isActivePlayer() &&
         Swal.fire({
           title: 'Confirm move?',
           icon: 'question',
@@ -218,6 +224,13 @@ export default class GameBoard extends Component {
     return hoveredAreas
   }
 
+  rollDices = () => {
+    if (this.isActivePlayer()) {
+      this.props.moves.startRollDices()
+      this.setState({ openDice: true })
+    }
+  }
+
   renderPlayers = () => {
     const players = this.props.G.players
     return Object.keys(players).map((playerID) => {
@@ -241,9 +254,7 @@ export default class GameBoard extends Component {
   renderHoursToken = () => {
     const players = this.props.G.players
     return Object.keys(players).map((playerID) => {
-      const hoursPassed =
-        players[playerID].hoursPassed +
-        (this.props.playerID === this.props.ctx.currentPlayer ? players[playerID].path.length : 0)
+      const hoursPassed = players[playerID].hoursPassed + (this.isActivePlayer() ? players[playerID].path.length : 0)
       return (
         <img
           key={playerID}
@@ -305,10 +316,13 @@ export default class GameBoard extends Component {
             // onClick={someFunctionForTheMainButton}
           >
             <Action text="Drink" onClick={() => console.log('drinking')}>
-              <Icon name="glass martini" />
+              <IoIosWater />
             </Action>
             <Action text="Collect" onClick={() => console.log('collecting coins')}>
-              <Icon name="usd" />
+              <RiHandCoinLine />
+            </Action>
+            <Action text="Fight" onClick={() => this.rollDices()}>
+              <RiSwordLine />
             </Action>
             <Action text="End Turn" onClick={() => console.log('ending turn')}>
               <Icon name="flag checkered" />
@@ -318,6 +332,13 @@ export default class GameBoard extends Component {
             </Action>
           </Fab>
         </React.Fragment>
+        <DicesWindow
+          open={this.state.openDice}
+          handleClose={() => this.setState({ openDice: false })}
+          color={this.playersColor[this.props.playerID]}
+          rollingDices={this.props.G.rollingDices}
+          onFinishRoll={() => this.props.moves.finishRollDices()}
+        />
       </div>
     )
   }

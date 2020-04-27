@@ -8,6 +8,13 @@ function distance(from, to) {
   return Math.sqrt(iDiff * iDiff + jDiff * jDiff)
 }
 
+const numberOfDice = (player) => {
+  const level = player.willpower >= 14 ? 2 : player.willpower >= 7 ? 1 : 0
+  return player.numDice[level]
+}
+
+const currentPlayer = (G, ctx) => G.players[ctx.currentPlayer]
+
 const allPlayersMove = {
   drawPath: {
     move: (G, ctx, from, to) => {
@@ -91,25 +98,34 @@ const LegendOfAndor = {
 
     return {
       difficulty: setupData && setupData.difficulty,
+      rollingDices: null,
+      dices: [0, 0],
       round: 0,
       legend: 1,
       letter: 'A',
       players,
-      init: false
+      init: false,
     }
   },
 
   moves: {
     ...allPlayersMove,
     move(G, ctx, to) {
+      const player = currentPlayer(G, ctx)
       G.players[ctx.currentPlayer].positionOnMap = to
-      G.players[ctx.currentPlayer].hoursPassed += G.players[ctx.currentPlayer].path.length
+      G.players[ctx.currentPlayer].hoursPassed += player.path.length
       Object.keys(G.players).map((playerID) => (G.players[playerID].path = []))
       ctx.events.endTurn()
     },
     fight(G, ctx, id) {},
     drink(G, ctx, id) {},
     setupData(G, ctx, setupData) {},
+    startRollDices: (G, ctx) => {
+      return { ...G, rollingDices: ctx.random.D6(numberOfDice(currentPlayer(G, ctx))) }
+    },
+    finishRollDices: (G) => {
+      return { ...G, dices: G.rollingDices, rollingDices: null }
+    },
   },
 
   turn: {

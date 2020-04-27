@@ -25,7 +25,6 @@ const CreateGameModal = (props) => {
           text: 'This game ID does not exist!',
         })
       )
-    // history.push(`/lobby`)
   }
 
   return (
