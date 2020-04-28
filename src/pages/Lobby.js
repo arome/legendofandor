@@ -11,10 +11,14 @@ import HeroSelectionModal from '../modals/HeroSelectionModal'
 import character from '../assets/images/characters/pictures/no_character.png'
 import { Icon } from 'semantic-ui-react'
 import { ClockLoader } from 'react-spinners'
+import { Widget, addResponseMessage } from 'react-chat-widget'
+import 'react-chat-widget/lib/styles.css'
+import socketIOClient from 'socket.io-client'
 
 export default () => {
   const { gameID } = useParams()
   const history = useHistory()
+  const [socket, setSocket] = useState(null)
   const [playerName, setPlayerName] = useState('')
   const [playerID, setPlayerID] = useState(null)
   const [players, setPlayers] = useState([])
@@ -47,7 +51,6 @@ export default () => {
 
   const joinGame = (playerID, playerName) => {
     setOpenPlayerName(false)
-
     Axios.post(`${server}/games/${name}/${gameID}/join`, { playerID, playerName }).then((res) => {
       const credentials = res.data.playerCredentials
       setCredentials(credentials)
@@ -89,6 +92,14 @@ export default () => {
   }
 
   useEffect(() => {
+    const socket = socketIOClient(server)
+    socket.on('new message', (data) => {
+      addResponseMessage(`__${data.username}__: ${data.message}`)
+    })
+    setSocket(socket)
+  }, [])
+
+  useEffect(() => {
     const browserCookie = Cookies.load('lobby') || {}
     if (gameID in browserCookie) {
       setPlayerName(browserCookie[gameID].playerName)
@@ -101,6 +112,9 @@ export default () => {
         const playersReady = players.map((player) => player.name && player.name.split(separator).length === 3)
         let ready = playersReady.length > 0 && playersReady.every((v) => v)
 
+        setPlayers(players)
+        setLoading(false)
+
         ready &&
           history.push('/start-game', {
             playerID,
@@ -108,14 +122,12 @@ export default () => {
             credentials,
             numPlayers: players.length,
           })
-        setPlayers(players)
-        setLoading(false)
       })
     }, 1000)
     return () => {
       clearInterval(interval)
     }
-  }, [gameID, history, playerID, credentials])
+  }, [playerID, credentials, gameID, history])
 
   const divStyle = {
     width: '100vw',
@@ -167,6 +179,10 @@ export default () => {
     return status
   }
 
+  const newMessage = (message) => {
+    socket.emit('new message', { username: playerName.split(separator)[0] || 'Spectator', message })
+  }
+
   return (
     <div className="lobby" style={divStyle}>
       <div className="header">
@@ -204,6 +220,13 @@ export default () => {
             {displayStatus()}
           </React.Fragment>
         )}
+        <Widget
+          title={`${players.filter((player) => player.name).length} player${
+            players.filter((player) => player.name).length > 1 ? 's' : ''
+          } joined`}
+          subtitle=""
+          handleNewUserMessage={newMessage}
+        />
       </div>
       <PlayerNameModal
         open={openPlayerName}

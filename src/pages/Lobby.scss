@@ -2,6 +2,19 @@
   padding: 0 5vw;
   color: white;
   font-size: 2vh;
+
+  .rcw-launcher,
+  .rcw-conversation-container .rcw-header,
+  .rcw-client .rcw-message-text {
+    background-color: #62161d;
+  }
+  .rcw-conversation-container.hidden {
+    display: none;
+  }
+  .rcw-message > .rcw-response {
+    color: black;
+  }
+
   .header {
     padding: 30px;
     height: 10vh;
@@ -11,7 +24,7 @@
     margin: 0 auto;
     border-color: red;
   }
-  
+
   .content {
     display: flex;
     justify-content: center;
