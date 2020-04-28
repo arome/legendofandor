@@ -83,12 +83,12 @@ const LegendOfAndor = {
 
   setup: (ctx, setupData) => {
     let monsters = []
-    const positionsOfGores = [8, 20, 21, 26, 48]
-    positionsOfGores.forEach((position) =>
-      monsters.push({ type: 'Gore', numDice: [2, 3, 3], willpower: 4, strength: 2, positionOnMap: position })
+    const positionsOfGors = [8, 20, 21, 26, 48]
+    positionsOfGors.forEach((position) =>
+      monsters.push({ type: 'Gor', numDice: [2, 3, 3], willpower: 4, strength: 2, positionOnMap: position })
     )
     monsters.push({
-      type: 'Skrull',
+      type: 'Skrall',
       numDice: [2, 3, 3],
       willpower: 6,
       strength: 6,

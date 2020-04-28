@@ -35,7 +35,7 @@ export default class GameBoard extends Component {
       this.playerCharacters[player] = require(`../assets/images/characters/pawns/${heroName}.png`)
       this.playersColor.push(heroes[heroName].color)
     })
-    const monsterTypes = ['Gore', 'Skrull']
+    const monsterTypes = ['Gor', 'Skrall']
     const tokenTypes = ['fog', 'well', 'farmer']
 
     monsterTypes.forEach(
