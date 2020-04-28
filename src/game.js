@@ -82,27 +82,69 @@ const LegendOfAndor = {
   maxPlayers: 4,
 
   setup: (ctx, setupData) => {
+    let monsters = []
+    const positionsOfGores = [8, 20, 21, 26, 48]
+    positionsOfGores.forEach((position) =>
+      monsters.push({ type: 'Gore', numDice: [2, 3, 3], willpower: 4, strength: 2, positionOnMap: position })
+    )
+    monsters.push({
+      type: 'Skrull',
+      numDice: [2, 3, 3],
+      willpower: 6,
+      strength: 6,
+      positionOnMap: 19,
+    })
+
     const players = {}
     for (let i = 0; i < ctx.numPlayers; i++) {
       players[i] = {
         hoursPassed: 0,
         numDice: 2,
         specialAbilities: { Bait: false, ProxyAttack: false, WellPower: false, FlipDice: false },
-        strength: 1,
+        strength: 2,
         willpower: 7,
+        gold: 0,
         positionOnMap: 0,
         hoveredArea: null,
         path: [],
       }
     }
+    let difficulty = setupData ? setupData.difficulty : 'easy'
+    let tokens = []
+    const fogPositions = [8, 11, 12, 13, 16, 32, 42, 44, 46, 47, 48, 49, 56, 63, 64]
+    const wellPositions = [5, 35, 55, 45]
+    fogPositions.forEach((positionOnMap) =>
+      tokens.push({
+        type: 'fog',
+        positionOnMap,
+      })
+    )
+    wellPositions.forEach((positionOnMap) =>
+      tokens.push({
+        type: 'well',
+        positionOnMap,
+      })
+    )
+    tokens.push({
+      type: 'farmer',
+      positionOnMap: 24,
+    })
+    if (difficulty === 'easy') {
+      tokens.push({
+        type: 'farmer',
+        positionOnMap: 36,
+      })
+    }
 
     return {
-      difficulty: setupData && setupData.difficulty,
+      difficulty,
       rollingDices: null,
       dices: [0, 0],
       round: 0,
       legend: 1,
       letter: 'A',
+      tokens,
+      monsters,
       players,
       init: false,
     }
@@ -151,13 +193,18 @@ const LegendOfAndor = {
             const hero = heroes[heroeslist[pos]]
             G.players[pos].numDice = hero.numDice
             G.players[pos].specialAbilities[hero.specialAbility] = true
+            G.players[pos].positionOnMap = hero.positionOnMap
             G.init = true
           })
         },
       },
       endIf: (G) => G.init,
-      next: 'play',
+      next: 'splitressource',
       start: true,
+    },
+    splitressource: {
+      moves: {},
+      next: 'play',
     },
 
     play: {},

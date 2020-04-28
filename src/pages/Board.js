@@ -13,6 +13,7 @@ import { RiSwordLine, RiHandCoinLine } from 'react-icons/ri'
 import { IoIosWater } from 'react-icons/io'
 import DicesWindow from '../modals/DiceWindow'
 import 'react-tiny-fab/dist/styles.css'
+import narratorToken from '../assets/images/tokens/narrator.png'
 
 export default class GameBoard extends Component {
   MAP
@@ -23,6 +24,8 @@ export default class GameBoard extends Component {
     super(props)
     const heroeslist = []
     this.playerCharacters = {}
+    this.monsterCharacters = {}
+    this.tokens = {}
     this.playersColor = []
     Object.keys(this.props.gameMetadata).forEach((player) => {
       const heroName = this.props.gameMetadata[player].name.split(separator)[1]
@@ -30,6 +33,14 @@ export default class GameBoard extends Component {
       this.playerCharacters[player] = require(`../assets/images/characters/pawns/${heroName}.png`)
       this.playersColor.push(heroes[heroName].color)
     })
+    const monsterTypes = ['Gore', 'Skrull']
+    const tokenTypes = ['fog', 'well', 'farmer']
+
+    monsterTypes.forEach(
+      (monsterType) =>
+        (this.monsterCharacters[monsterType] = require(`../assets/images/characters/pawns/monsters/${monsterType}.png`))
+    )
+    tokenTypes.forEach((tokenType) => (this.tokens[tokenType] = require(`../assets/images/tokens/${tokenType}.png`)))
     this.playersToken = {}
     this.playersColor.map(
       (color, index) => (this.playersToken[index] = require(`../assets/images/tokens/${color}.png`))
@@ -142,7 +153,7 @@ export default class GameBoard extends Component {
     }
   }
 
-  getTokenPosition(area, playerID) {
+  getTokenPosition(area) {
     const center = this.computeCenter(area)
     const horizontalTranslation = this.getCharacterSize().width / 2
     const veritcalTranslation = (this.getCharacterSize().heigth * 2) / 5
@@ -251,6 +262,24 @@ export default class GameBoard extends Component {
     })
   }
 
+  renderMonsters = () => {
+    const monsters = this.props.G.monsters
+    return monsters.map((monster, key) => {
+      return (
+        <img
+          key={key}
+          src={this.monsterCharacters[monster.type]}
+          alt="monster"
+          className="character"
+          style={{
+            ...this.getTokenPosition(this.MAP.areas[monster.positionOnMap]),
+            ...this.getCharacterSize(),
+          }}
+        />
+      )
+    })
+  }
+
   renderHoursToken = () => {
     const players = this.props.G.players
     return Object.keys(players).map((playerID) => {
@@ -262,7 +291,25 @@ export default class GameBoard extends Component {
           src={this.playersToken[playerID]}
           className="character"
           style={{
-            ...this.getTokenPosition({ coords: tiles.hours[Math.min(hoursPassed, 10)] }, playerID),
+            ...this.getTokenPosition({ coords: tiles.hours[Math.min(hoursPassed, 10)] }),
+            ...this.getTokenSize(),
+          }}
+        />
+      )
+    })
+  }
+
+  renderTokens = () => {
+    const tokens = this.props.G.tokens
+    return tokens.map((token, key) => {
+      return (
+        <img
+          key={key}
+          alt="token"
+          src={this.tokens[token.type]}
+          className="character"
+          style={{
+            ...this.getTokenPosition(this.MAP.areas[token.positionOnMap]),
             ...this.getTokenSize(),
           }}
         />
@@ -304,8 +351,19 @@ export default class GameBoard extends Component {
               {this.state.hoveredArea?.name}
             </span>
           )}
+          {this.renderTokens()}
           {this.renderPlayers()}
+          {this.renderMonsters()}
           {this.renderHoursToken()}
+          {/* <img
+            alt="narrator token"
+            src={narratorToken}
+            className="character"
+            style={{
+              ...this.getTokenPosition({ coords: tiles.narrator[this.props.G.letter] }),
+              ...this.getTokenSize(),
+            }}
+          /> */}
           <Fab
             mainButtonStyles={{ backgroundColor: this.playersColor[this.props.playerID] }}
             actionButtonStyles={{ backgroundColor: this.playersColor[this.props.playerID] }}
