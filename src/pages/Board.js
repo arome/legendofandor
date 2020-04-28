@@ -12,6 +12,8 @@ import { separator, heroes } from '../common'
 import { RiSwordLine, RiHandCoinLine } from 'react-icons/ri'
 import { IoIosWater } from 'react-icons/io'
 import DicesWindow from '../modals/DiceWindow'
+import ResourceSplit from '../modals/ResourceSplit'
+
 import 'react-tiny-fab/dist/styles.css'
 import narratorToken from '../assets/images/tokens/narrator.png'
 
@@ -369,9 +371,7 @@ export default class GameBoard extends Component {
             actionButtonStyles={{ backgroundColor: this.playersColor[this.props.playerID] }}
             position={{ bottom: 50, right: 50 }}
             icon={<Icon name="add" />}
-            // event={event}
             alwaysShowTitle={true}
-            // onClick={someFunctionForTheMainButton}
           >
             <Action text="Drink" onClick={() => console.log('drinking')}>
               <IoIosWater />
@@ -396,6 +396,14 @@ export default class GameBoard extends Component {
           color={this.playersColor[this.props.playerID]}
           rollingDices={this.props.G.rollingDices}
           onFinishRoll={() => this.props.moves.finishRollDices()}
+        />
+        <ResourceSplit
+          splitResource={this.props.moves.splitResource}
+          resources={this.props.G.splittableResource}
+          add={this.props.moves.add}
+          tempSplit={this.props.G.tempSplit}
+          open={this.props.G.splittableResource.length > 0}
+          names={this.props.gameMetadata.map((player) => player.name.split(separator)[0])}
         />
       </div>
     )

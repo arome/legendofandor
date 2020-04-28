@@ -1,0 +1,15 @@
+.player-row {
+  display: flex;
+  justify-content: flex-end;
+  .money {
+    padding: 0 30px;
+  }
+  div {
+    display: flex;
+    align-items: baseline;
+  }
+}
+
+.button-group {
+  margin: 0 10px;
+}

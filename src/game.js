@@ -104,6 +104,7 @@ const LegendOfAndor = {
         strength: 2,
         willpower: 7,
         gold: 0,
+        wineskin: 0,
         positionOnMap: 0,
         hoveredArea: null,
         path: [],
@@ -146,6 +147,8 @@ const LegendOfAndor = {
       tokens,
       monsters,
       players,
+      splittableResource: [],
+      tempSplit: {},
       init: false,
     }
   },
@@ -194,16 +197,64 @@ const LegendOfAndor = {
             G.players[pos].numDice = hero.numDice
             G.players[pos].specialAbilities[hero.specialAbility] = true
             G.players[pos].positionOnMap = hero.positionOnMap
+            G.splittableResource = [
+              { type: 'gold' },
+              { type: 'gold' },
+              { type: 'gold' },
+              { type: 'gold' },
+              { type: 'gold' },
+              { type: 'wineskin' },
+              { type: 'wineskin' },
+            ]
             G.init = true
           })
         },
       },
       endIf: (G) => G.init,
-      next: 'splitressource',
+      next: 'splitresource',
       start: true,
     },
-    splitressource: {
-      moves: {},
+
+    splitresource: {
+      onBegin: (G, ctx) => {
+        let distinctTypes = []
+        for (let i = 0; i < G.splittableResource.length; i++) {
+          if (!(G.splittableResource[i].type in distinctTypes)) {
+            distinctTypes.push(G.splittableResource[i].type)
+          }
+        }
+        let tempSplit = {}
+        Object.keys(G.players).forEach((key) => {
+          let initObject = {}
+          distinctTypes.forEach((type) => (initObject[type] = 0))
+          tempSplit[key] = initObject
+        })
+        G.tempSplit = tempSplit
+      },
+      moves: {
+        add(G, ctx, type, quantity, playerID) {
+          const totalRes = G.splittableResource.filter((res) => res.type === type).length
+          let currentTotal = 0
+          Object.keys(G.tempSplit).forEach((key) => (currentTotal += G.tempSplit[key][type]))
+          if (G.tempSplit[playerID][type] + quantity >= 0 && currentTotal + quantity <= totalRes)
+            G.tempSplit[playerID][type] += quantity
+        },
+        splitResource(G, ctx) {
+          Object.keys(G.tempSplit).map((key) => {
+            const res = G.tempSplit[key]
+            /*
+            {
+              'gold': 3,
+              'wineskin':1
+            }
+            */
+            Object.keys(res).map((type) => (G.players[key][type] += res[type]))
+          })
+          G.tempSplit = {}
+          G.splittableResource = []
+        },
+      },
+      endIf: (G) => G.splittableResource.length === 0,
       next: 'play',
     },
 
