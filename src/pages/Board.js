@@ -13,7 +13,7 @@ import { RiSwordLine, RiHandCoinLine } from 'react-icons/ri'
 import { IoIosWater } from 'react-icons/io'
 import DicesWindow from '../modals/DiceWindow'
 import ResourceSplit from '../modals/ResourceSplit'
-
+import { BsSkipForwardFill } from 'react-icons/bs'
 import 'react-tiny-fab/dist/styles.css'
 import narratorToken from '../assets/images/tokens/narrator.png'
 
@@ -36,7 +36,7 @@ export default class GameBoard extends Component {
       this.playersColor.push(heroes[heroName].color)
     })
     const monsterTypes = ['Gor', 'Skrall']
-    const tokenTypes = ['fog', 'well', 'farmer']
+    const tokenTypes = ['fog', 'well', 'farmer', 'empty-well']
 
     monsterTypes.forEach(
       (monsterType) =>
@@ -129,14 +129,26 @@ export default class GameBoard extends Component {
     return { top: `${area.center[1]}px`, left: `${area.center[0]}px` }
   }
 
-  getPlayerPosition(area, playerID, duplicates) {
-    const center = this.computeCenter(area)
+  getPlayerPosition(position, id) {
+    const center = this.computeCenter(this.MAP.areas[position])
+    const monstersInArea = this.props.G.monsters.filter((monster) => monster.positionOnMap === position)
+    const heroesInArea = Object.keys(this.props.G.players).filter(
+      (playerID) => this.props.G.players[playerID].positionOnMap === position
+    )
+    const charactersInArea = heroesInArea.concat(monstersInArea)
+    console.log('charactersInArea', charactersInArea)
+    const pos = charactersInArea.findIndex((character) => {
+      if (typeof character === 'string') {
+        return character === id
+      } else {
+        return character.startingPos === id
+      }
+    })
     const horizontalTranslation = this.getCharacterSize().width / 2
     const veritcalTranslation = (this.getCharacterSize().heigth * 2) / 5
     let topPosition = center[1]
     let leftPosition = center[0]
-    const pos = duplicates.indexOf(playerID)
-    if (duplicates.length > 1) {
+    if (charactersInArea.length > 1) {
       switch (pos) {
         case 0:
         case 3:
@@ -167,11 +179,29 @@ export default class GameBoard extends Component {
     }
   }
 
-  getTokenSize = () => {
+  getTokenSize = (type) => {
     const scale = (2 * this.state.windowWidth) / this.originalImgWidth
+    let width = 1
+    let height = 1
+    let ratio = 1
+    switch (type) {
+      case 'well':
+        width = 182
+        height = 207
+        ratio = 182 / 3
+        break
+      case 'fog':
+        ratio = 1 / 3
+        break
+      case 'farmer':
+        ratio = 1 / 2
+        break
+      default:
+        ratio = 1
+    }
     return {
-      width: 50 * scale,
-      heigth: 50 * scale,
+      width: (width * 50 * scale) / ratio,
+      heigth: (height * 50 * scale) / ratio,
     }
   }
 
@@ -191,6 +221,10 @@ export default class GameBoard extends Component {
         : (coord * this.state.windowWidth) / this.originalImgWidth
     )
     // Calculate centroid
+    if (scaledCoords.length === 3) {
+      const [x, y, radius] = scaledCoords
+      return [x, y]
+    }
     const n = scaledCoords.length / 2
     const { y, x } = scaledCoords.reduce(
       ({ y, x }, val, idx) => {
@@ -248,7 +282,6 @@ export default class GameBoard extends Component {
     const players = this.props.G.players
     return Object.keys(players).map((playerID) => {
       const positionOnMap = players[playerID].positionOnMap
-      const duplicates = Object.keys(players).filter((pplayerID) => players[pplayerID].positionOnMap === positionOnMap)
       return (
         <img
           key={playerID}
@@ -256,7 +289,7 @@ export default class GameBoard extends Component {
           alt="character"
           className="character"
           style={{
-            ...this.getPlayerPosition(this.MAP.areas[positionOnMap], playerID, duplicates),
+            ...this.getPlayerPosition(positionOnMap, playerID),
             ...this.getCharacterSize(),
           }}
         />
@@ -274,7 +307,7 @@ export default class GameBoard extends Component {
           alt="monster"
           className="character"
           style={{
-            ...this.getTokenPosition(this.MAP.areas[monster.positionOnMap]),
+            ...this.getPlayerPosition(monster.positionOnMap, monster.startingPos),
             ...this.getCharacterSize(),
           }}
         />
@@ -304,15 +337,22 @@ export default class GameBoard extends Component {
   renderTokens = () => {
     const tokens = this.props.G.tokens
     return tokens.map((token, key) => {
+      let coords = this.MAP.areas[token.positionOnMap].coords
+      if (token.type === 'fog') {
+        coords = tiles.fogAreas[token.positionOnMap]
+      } else if (token.type === 'well') {
+        coords = tiles.wellAreas[token.positionOnMap]
+      }
+      const tokenType = token.type === 'well' ? (token.used ? 'empty-well' : 'well') : token.type
       return (
         <img
           key={key}
-          alt="token"
-          src={this.tokens[token.type]}
+          alt={token.type}
+          src={this.tokens[tokenType]}
           className="character"
           style={{
-            ...this.getTokenPosition(this.MAP.areas[token.positionOnMap]),
-            ...this.getTokenSize(),
+            ...this.getTokenPosition({ coords }),
+            ...this.getTokenSize(token.type),
           }}
         />
       )
@@ -357,15 +397,15 @@ export default class GameBoard extends Component {
           {this.renderPlayers()}
           {this.renderMonsters()}
           {this.renderHoursToken()}
-          {/* <img
+          <img
             alt="narrator token"
             src={narratorToken}
             className="character"
             style={{
-              ...this.getTokenPosition({ coords: tiles.narrator[this.props.G.letter] }),
+              ...this.getTokenPosition({ coords: tiles.narratorAreas[this.props.G.letter] }),
               ...this.getTokenSize(),
             }}
-          /> */}
+          />
           <Fab
             mainButtonStyles={{ backgroundColor: this.playersColor[this.props.playerID] }}
             actionButtonStyles={{ backgroundColor: this.playersColor[this.props.playerID] }}
@@ -373,7 +413,7 @@ export default class GameBoard extends Component {
             icon={<Icon name="add" />}
             alwaysShowTitle={true}
           >
-            <Action text="Drink" onClick={() => console.log('drinking')}>
+            <Action text="Drink" onClick={() => this.props.moves.drink()}>
               <IoIosWater />
             </Action>
             <Action text="Collect" onClick={() => console.log('collecting coins')}>
@@ -382,10 +422,13 @@ export default class GameBoard extends Component {
             <Action text="Fight" onClick={() => this.rollDices()}>
               <RiSwordLine />
             </Action>
-            <Action text="End Turn" onClick={() => console.log('ending turn')}>
+            <Action text="Skip Turn" onClick={() => this.props.moves.skipTurn()}>
+              <BsSkipForwardFill />
+            </Action>
+            <Action text="End Turn" onClick={() => this.props.moves.endTurn()}>
               <Icon name="flag checkered" />
             </Action>
-            <Action text="End Day" onClick={() => console.log('ending day')}>
+            <Action text="End Day" onClick={() => this.props.moves.endDay()}>
               <Icon name="bed" />
             </Action>
           </Fab>
