@@ -79,7 +79,7 @@ export default class GameBoard extends Component {
       openDice: false,
     }
 
-    !this.props.G.init && this.props.moves.setupData(heroeslist, namelist)
+    !this.props.G.init && this.isActivePlayer() && this.props.moves.setupData(heroeslist, namelist)
   }
 
   handleResize = () =>
@@ -375,39 +375,43 @@ export default class GameBoard extends Component {
     }
   }
 
-  fight = () => {
+  fight = async () => {
     const position = this.getTurnPlayer().positionOnMap
     const hoursPassed = this.getTurnPlayer().hoursPassed
-    const monsters = this.props.G.monsters.filter((monster) => {
-      return (
+    const monsters = this.props.G.monsters.filter(
+      (monster) =>
         monster.positionOnMap === position ||
         (this.getTurnPlayer().specialAbilities.proxyAttack && tiles.neighbors[position].includes(monster.positionOnMap))
-      )
-    })
-    console.log('monsters', monsters)
+    )
+
     if (this.isActivePlayer() && monsters.length > 0 && hoursPassed < 10) {
       if (hoursPassed < 7 || (hoursPassed >= 7 && this.getTurnPlayer().willpower >= 3)) {
-        this.props.moves.startFight()
-        this.setState({ openDice: true })
+        if (monsters.length > 1) {
+          let inputOptions = {}
+          monsters.forEach((monster) => (inputOptions[monster.type] = monster.positionOnMap))
+          const { type: positionMonster } = await Swal.fire({
+            title: 'Which monster to attack',
+            input: 'select',
+            inputOptions,
+            inputPlaceholder: 'Select a monster',
+            showCancelButton: true,
+          })
+          this.props.moves.startFight(positionMonster)
+          this.setState({ openDice: true })
+        } else {
+          this.props.moves.startFight(position)
+          this.setState({ openDice: true })
+        }
       }
     }
   }
 
-  finishRoll = () => {
+  finishRoll = async () => {
     if (this.props.G.rollingDices) {
       if ('player' in this.props.G.fight) {
         this.props.moves.endFight()
       } else {
-        const position = this.getTurnPlayer().positionOnMap
-        const monster = this.props.G.monsters.filter((monster) => {
-          return (
-            monster.positionOnMap === position ||
-            (this.getTurnPlayer().specialAbilities.proxyAttack &&
-              tiles.neighbors[position].includes(monster.positionOnMap))
-          )
-        })[0]
-        console.log('this.props.G.rollingDices', this.props.G.rollingDices)
-        this.props.moves.monsterAttack(monster)
+        this.props.moves.monsterAttack()
       }
     }
   }
@@ -540,19 +544,30 @@ export default class GameBoard extends Component {
         html = 'You lost, loser.'
         timer = 10000000000
       }
-      Swal.fire({
-        title,
-        html,
-        timer,
-        timerProgressBar: true,
-        onBeforeOpen: () => {
-          status !== 'game over' && Swal.showLoading()
-        },
-      }).then((result) => {
-        let endTurn = status === 'fight summary'
-        status !== 'game over' && this.props.moves.clearStatus(endTurn)
-      })
+      if (status === 'next turn' && this.getTurnPlayer().endDay) {
+        this.props.moves.clearStatus()
+      } else {
+        Swal.fire({
+          title,
+          html,
+          timer,
+          timerProgressBar: true,
+          onBeforeOpen: () => {
+            status !== 'game over' && Swal.showLoading()
+          },
+        }).then(() => {
+          let endTurn = status === 'fight summary'
+          status !== 'game over' && this.props.moves.clearStatus(endTurn)
+        })
+      }
     }
+  }
+
+  isEmpty(obj) {
+    for (var key in obj) {
+      if (obj.hasOwnProperty(key)) return false
+    }
+    return true
   }
 
   render() {
@@ -642,7 +657,7 @@ export default class GameBoard extends Component {
           resources={this.props.G.splittableResource}
           add={this.props.moves.add}
           tempSplit={this.props.G.tempSplit}
-          open={this.props.G.splittableResource.length > 0}
+          open={!this.isEmpty(this.props.G.splittableResource)}
           names={this.props.gameMetadata.map((player) => player.name.split(separator)[0])}
         />
         <Widget title="In Game Chat" subtitle="" handleNewUserMessage={this.handleNewUserMessage} />

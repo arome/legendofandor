@@ -79,7 +79,6 @@ class DiceManagerClass {
       }
 
       if (allStable) {
-        console.log("all stable");
         DiceManager.world.removeEventListener("postStep", check);
 
         for (let i = 0; i < diceValues.length; i++) {

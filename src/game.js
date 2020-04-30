@@ -218,7 +218,7 @@ const LegendOfAndor = {
       fight: {},
       status: null,
       castleDefense: 5 - ctx.numPlayers,
-      splittableResource: [],
+      splittableResource: {},
       tempSplit: {},
       init: false,
     }
@@ -234,25 +234,13 @@ const LegendOfAndor = {
           G.players[pos].specialAbilities[hero.specialAbility] = true
           G.players[pos].positionOnMap = hero.positionOnMap
           G.players[pos].name = namelist[pos]
-          G.splittableResource = [
-            { type: 'gold' },
-            { type: 'gold' },
-            { type: 'gold' },
-            { type: 'gold' },
-            { type: 'gold' },
-            { type: 'wineskin' },
-            { type: 'wineskin' },
-          ]
-          let distinctTypes = []
-          for (let i = 0; i < G.splittableResource.length; i++) {
-            if (!(G.splittableResource[i].type in distinctTypes)) {
-              distinctTypes.push(G.splittableResource[i].type)
-            }
-          }
+          G.splittableResource = { gold: 5, wineskin: 2 }
           let tempSplit = {}
           Object.keys(G.players).forEach((key) => {
             let initObject = {}
-            distinctTypes.forEach((type) => (initObject[type] = 0))
+            Object.keys(G.splittableResource).forEach((type) => {
+              initObject[type] = 0
+            })
             tempSplit[key] = initObject
           })
           G.tempSplit = tempSplit
@@ -297,8 +285,9 @@ const LegendOfAndor = {
       ctx.events.endTurn()
     },
     skipTurn(G, ctx) {
-      if (G.players[ctx.playerID].hoursPassed === 10) console.log('end day')
-      else G.players[ctx.playerID].hoursPassed += 1
+      if (G.players[ctx.playerID].hoursPassed === 10) {
+        G.players[ctx.playerID].endDay = true
+      } else G.players[ctx.playerID].hoursPassed += 1
       ctx.events.endTurn()
     },
     endTurn(G, ctx) {
@@ -308,15 +297,22 @@ const LegendOfAndor = {
       G.players[ctx.currentPlayer].endDay = true
       G.players[ctx.currentPlayer].hoursPassed = 0
     },
-    startFight: (G, ctx) => {
-      return { ...G, rollingDices: ctx.random.D6(numberOfDice(currentPlayer(G, ctx))) }
+    startFight: (G, ctx, position) => {
+      return {
+        ...G,
+        fight: { monster: { position } },
+        rollingDices: ctx.random.D6(numberOfDice(currentPlayer(G, ctx))),
+      }
     },
-    monsterAttack: (G, ctx, monster) => {
+    monsterAttack: (G, ctx) => {
+      const monster = G.monsters.filter((monster) => monster.positionOnMap === G.fight.monster.position)[0]
       let newValue = G.rollingDices
       if (currentPlayer(G, ctx).specialAbilities.flipDice) {
         newValue = [G.rollingDices[0] < 4 ? 7 - G.rollingDices[0] : G.rollingDices[0]]
       }
-      return { ...G, fight: { player: newValue }, rollingDices: ctx.random.D6(numberOfDice(monster)) }
+      let fight = G.fight
+      fight['player'] = newValue
+      return { ...G, fight, rollingDices: ctx.random.D6(numberOfDice(monster)) }
     },
     endFight: (G, ctx) => {
       let summary = ''
@@ -544,10 +540,9 @@ const LegendOfAndor = {
       splitresource: {
         moves: {
           add(G, ctx, type, quantity, playerID) {
-            const totalRes = G.splittableResource.filter((res) => res.type === type).length
             let currentTotal = 0
             Object.keys(G.tempSplit).forEach((key) => (currentTotal += G.tempSplit[key][type]))
-            if (G.tempSplit[playerID][type] + quantity >= 0 && currentTotal + quantity <= totalRes)
+            if (G.tempSplit[playerID][type] + quantity >= 0 && currentTotal + quantity <= G.splittableResource[type])
               G.tempSplit[playerID][type] += quantity
           },
           splitResource(G, ctx) {
@@ -556,7 +551,7 @@ const LegendOfAndor = {
               Object.keys(res).map((type) => (G.players[key][type] += res[type]))
             })
             G.tempSplit = {}
-            G.splittableResource = []
+            G.splittableResource = {}
             ctx.events.setActivePlayers({ others: 'displayMapInput', currentPlayer: 'play' })
           },
         },

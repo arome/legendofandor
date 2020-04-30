@@ -6,10 +6,28 @@ import './ResourceSplit.scss'
 import { Button } from 'semantic-ui-react'
 
 export default (props) => {
+  let goldSelected = Object.keys(props.tempSplit)
+    .map((playerID) => props.tempSplit[playerID].gold)
+    .reduce((prev, curr) => prev + curr, 0)
+  let wineSkinSelected = Object.keys(props.tempSplit)
+    .map((playerID) => props.tempSplit[playerID].wineskin)
+    .reduce((prev, curr) => prev + curr, 0)
+
   return (
     <Modal size="mini" open={props.open} closeOnDimmerClick={false} closeIcon={false}>
       <Modal.Header>Ressource Splitter</Modal.Header>
       <Modal.Content>
+        <div className="total-resource">
+          <span>
+            {props.resources.gold - goldSelected}
+            <RiCoinLine />
+          </span>
+          <span>
+            {props.resources.wineskin - wineSkinSelected}
+            <IoMdWine />
+          </span>
+        </div>
+
         {props.names.map((name, index) => {
           return (
             <div className="player-row" key={index}>
@@ -33,7 +51,14 @@ export default (props) => {
             </div>
           )
         })}
-        <Button onClick={() => props.splitResource()}>Split Resources</Button>
+        <Button
+          onClick={() => {
+            if (props.resources.gold === goldSelected && props.resources.wineskin === wineSkinSelected)
+              props.splitResource()
+          }}
+        >
+          Split Resources
+        </Button>
       </Modal.Content>
     </Modal>
   )

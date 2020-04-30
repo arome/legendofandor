@@ -64,18 +64,12 @@ export default () => {
       CometChat.createUser(user, chatApiKey)
         .then(() => {
           CometChat.login(uid, chatApiKey).then(() =>
-            CometChat.joinGroup('legendofandor', CometChat.GROUP_TYPE.PUBLIC).then(
-              (group) => {
-                console.log('Group joined successfully:', group)
-                setUid(uid)
-                updateCookie({ uid })
-                createMessageListener()
-                fetchPreviousMessages(uid)
-              },
-              (error) => {
-                console.log('Group joining failed with exception:', error)
-              }
-            )
+            CometChat.joinGroup('legendofandor', CometChat.GROUP_TYPE.PUBLIC).then((group) => {
+              setUid(uid)
+              updateCookie({ uid })
+              createMessageListener()
+              fetchPreviousMessages(uid)
+            })
           )
         })
         .catch((e) => console.log('user creation failed e:', e))

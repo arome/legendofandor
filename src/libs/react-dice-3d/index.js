@@ -46,7 +46,6 @@ class Dices3d extends Component {
 
     // RENDERER
     this.renderer = new THREE.WebGLRenderer({ alpha: true })
-    // this.renderer.setClearColor( 0x000000, 0 ); // the default
     this.renderer.setSize(width, height)
     this.renderer.shadowMap.enabled = true
 
