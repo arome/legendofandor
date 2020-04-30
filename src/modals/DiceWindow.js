@@ -21,14 +21,15 @@ class DicesWindow extends Component {
   }
 
   render() {
-    const { rollingDices, color, open } = this.props
+    const { rollingDices, open, fight } = this.props
+    let color = 'player' in fight ? 'red' : this.props.color
     const dices =
       rollingDices &&
       rollingDices.map((die) => {
         return {
           type: DICE_TYPES.D6,
           backColor: color,
-          fontColor: 'white',
+          fontColor: color === 'yellow' ? 'black' : 'white',
           value: die,
         }
       })

@@ -6,17 +6,8 @@ import './ResourceSplit.scss'
 import { Button } from 'semantic-ui-react'
 
 export default (props) => {
-  const [playerName, setPlayerName] = useState('')
-  const [error, setError] = useState(false)
-
-  const handleSubmit = (event) => {
-    event.preventDefault()
-    const error = !(playerName && playerName.length > 0)
-    setError(error)
-    !error && props.joinGame(props.playerID, playerName)
-  }
   return (
-    <Modal size="mini" open={props.open} onClose={() => props.handleClose()} closeIcon>
+    <Modal size="mini" open={props.open} closeOnDimmerClick={false} closeIcon={false}>
       <Modal.Header>Ressource Splitter</Modal.Header>
       <Modal.Content>
         {props.names.map((name, index) => {

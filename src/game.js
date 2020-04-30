@@ -8,9 +8,9 @@ function distance(from, to) {
   return Math.sqrt(iDiff * iDiff + jDiff * jDiff)
 }
 
-const numberOfDice = (player) => {
-  const level = player.willpower >= 14 ? 2 : player.willpower >= 7 ? 1 : 0
-  return player.numDice[level]
+const numberOfDice = (character) => {
+  const level = character.willpower >= 14 ? 2 : character.willpower >= 7 ? 1 : 0
+  return character.numDice[level]
 }
 
 const currentPlayer = (G, ctx) => G.players[ctx.currentPlayer]
@@ -36,7 +36,7 @@ const allPlayersMove = {
         // Player clicked on a new area, extend path
         const pathAndHour = currentPath.length + hoursPassed
         if (pathAndHour <= 10) {
-          if (pathAndHour <= 7 || (pathAndHour > 7 && willpower >= 2 * (pathAndHour - 7))) {
+          if (pathAndHour <= 7 || (pathAndHour > 7 && willpower >= 2 * Math.min(pathAndHour - 7, currentPath.length))) {
             from = from || startingPosition
             let path = tiles.dijkstra.shortestPath(tiles.graph.vertices[from], tiles.graph.vertices[to], {
               OUT: { heuristic: (n) => distance(n, to) },
@@ -79,19 +79,35 @@ const allPlayersMove = {
     },
     redact: true,
   },
-  drink(G, ctx) {
-    const currentPos = G.players[ctx.playerID].positionOnMap
-    const fogTokenIndex = G.tokens.findIndex((token) => token.type === 'well' && token.positionOnMap === currentPos)
-    if (fogTokenIndex > -1) {
-      let tokens = G.tokens
-      let well = tokens.splice(fogTokenIndex, 1)[0]
-      if (!well.used) {
-        well.used = true
-        G.players[ctx.playerID].willpower += 3
-        tokens.push(well)
-        G.tokens = tokens
-      }
+  drink(G, ctx, wellTokenIndex, willpower) {
+    let tokens = G.tokens
+    let well = tokens.splice(wellTokenIndex, 1)[0]
+    well.used = true
+    G.players[ctx.playerID].willpower += willpower
+    tokens.push(well)
+    G.tokens = tokens
+  },
+  pickFarmer(G, ctx, farmerTokenIndex) {
+    let tokens = G.tokens
+    let farmer = tokens.splice(farmerTokenIndex, 1)[0]
+    farmer.picked = true
+    G.players[ctx.playerID].pickedFarmer.push(farmer.startingPos)
+    tokens.push(farmer)
+    G.tokens = tokens
+  },
+  dropFarmer(G, ctx, farmerTokenIndex) {
+    let tokens = G.tokens
+    let farmer = tokens.splice(farmerTokenIndex, 1)[0]
+    farmer.picked = false
+    let currentPickedFarmer = G.players[ctx.playerID].pickedFarmer
+    currentPickedFarmer.splice(currentPickedFarmer.indexOf(farmer.startingPos), 1)
+    G.players[ctx.playerID].pickedFarmer = currentPickedFarmer
+    if (G.players[ctx.playerID].positionOnMap === 0) {
+      G.castleDefense += 1
+    } else {
+      tokens.push(farmer)
     }
+    G.tokens = tokens
   },
 }
 
@@ -109,6 +125,10 @@ const LegendOfAndor = {
         numDice: [2, 3, 3],
         willpower: 4,
         strength: 2,
+        reward: {
+          gold: 2,
+          willpower: 2,
+        },
         startingPos: position,
         positionOnMap: position,
       })
@@ -117,6 +137,10 @@ const LegendOfAndor = {
       type: 'Skrall',
       numDice: [2, 3, 3],
       willpower: 6,
+      reward: {
+        gold: 4,
+        willpower: 4,
+      },
       strength: 6,
       startingPos: 19,
       positionOnMap: 19,
@@ -127,9 +151,10 @@ const LegendOfAndor = {
       players[i] = {
         hoursPassed: 0,
         numDice: 2,
-        specialAbilities: { Bait: false, ProxyAttack: false, WellPower: false, FlipDice: false },
+        specialAbilities: { bait: false, proxyAttack: false, wellPower: false, flipDice: false },
         strength: 2,
         willpower: 7,
+        pickedFarmer: [],
         gold: 0,
         wineskin: 0,
         positionOnMap: 0,
@@ -156,14 +181,16 @@ const LegendOfAndor = {
     )
     tokens.push({
       type: 'farmer',
+      startingPos: 24,
       positionOnMap: 24,
-      used: false,
+      picked: false,
     })
     if (difficulty === 'easy') {
       tokens.push({
         type: 'farmer',
+        startingPos: 36,
         positionOnMap: 36,
-        used: false,
+        picked: false,
       })
     }
 
@@ -177,6 +204,8 @@ const LegendOfAndor = {
       tokens,
       monsters,
       players,
+      fight: {},
+      status: null,
       castleDefense: 5 - ctx.numPlayers,
       splittableResource: [],
       tempSplit: {},
@@ -187,12 +216,13 @@ const LegendOfAndor = {
   moves: {
     ...allPlayersMove,
     setupData: {
-      move: (G, ctx, heroeslist) => {
+      move: (G, ctx, heroeslist, namelist) => {
         Object.keys(G.players).forEach((pos) => {
           const hero = heroes[heroeslist[pos]]
           G.players[pos].numDice = hero.numDice
           G.players[pos].specialAbilities[hero.specialAbility] = true
           G.players[pos].positionOnMap = hero.positionOnMap
+          G.players[pos].name = namelist[pos]
           G.splittableResource = [
             { type: 'gold' },
             { type: 'gold' },
@@ -224,6 +254,15 @@ const LegendOfAndor = {
     move(G, ctx, to) {
       const player = currentPlayer(G, ctx)
       G.players[ctx.currentPlayer].positionOnMap = to
+      if (player.pickedFarmer.length > 0) {
+        const farmers = G.tokens.filter((token) => token.type === 'farmer')
+        const nonFarmers = G.tokens.filter((token) => token.type !== 'farmer')
+        const newFarmers = farmers.map((farmer) => {
+          if (player.pickedFarmer.includes(farmer.startingPos)) farmer.positionOnMap = to
+          return farmer
+        })
+        G.tokens = nonFarmers.concat(newFarmers)
+      }
       let newTotalHours = G.players[ctx.currentPlayer].hoursPassed + player.path.length
       if (newTotalHours > 7) {
         G.players[ctx.currentPlayer].willpower -= 2 * Math.min(newTotalHours - 7, player.path.length)
@@ -233,17 +272,19 @@ const LegendOfAndor = {
         newTotalHours = 0
       }
       G.players[ctx.currentPlayer].hoursPassed = newTotalHours
-      Object.keys(G.players).map((playerID) => (G.players[playerID].path = []))
       if (Object.keys(tiles.fogAreas).indexOf(to + '') > -1) {
         let tokens = G.tokens
         const fogTokenIndex = tokens.findIndex((token) => token.type === 'fog' && token.positionOnMap === to)
         tokens.splice(fogTokenIndex, 1)
         G.tokens = tokens
+
+        // Object.keys(G.players).forEach(playerID => {
+        //   G.players[playerID].willpower += 1
+        // })
         console.log('activating fog effect')
       }
       ctx.events.endTurn()
     },
-    fight(G, ctx, id) {},
     skipTurn(G, ctx) {
       if (G.players[ctx.playerID].hoursPassed === 10) console.log('end day')
       else G.players[ctx.playerID].hoursPassed += 1
@@ -257,11 +298,119 @@ const LegendOfAndor = {
       G.players[ctx.currentPlayer].hoursPassed = 0
       ctx.events.endTurn()
     },
-    startRollDices: (G, ctx) => {
+    startFight: (G, ctx) => {
       return { ...G, rollingDices: ctx.random.D6(numberOfDice(currentPlayer(G, ctx))) }
     },
-    finishRollDices: (G) => {
-      return { ...G, dices: G.rollingDices, rollingDices: null }
+    monsterAttack: (G, ctx, monster) => {
+      let newValue = G.rollingDices
+      if (currentPlayer(G, ctx).specialAbilities.flipDice) {
+        newValue = [G.rollingDices[0] < 4 ? 7 - G.rollingDices[0] : G.rollingDices[0]]
+      }
+      return { ...G, fight: { player: newValue }, rollingDices: ctx.random.D6(numberOfDice(monster)) }
+    },
+    endFight: (G, ctx) => {
+      let summary = ''
+      const position = currentPlayer(G, ctx).positionOnMap
+      const monsterIndex = G.monsters.findIndex(
+        (monster) =>
+          monster.positionOnMap === position ||
+          (currentPlayer(G, ctx).specialAbilities.proxyAttack &&
+            tiles.neighbors[position].includes(monster.positionOnMap))
+      )
+      let monsters = G.monsters
+      let monster = monsters.splice(monsterIndex, 1)[0]
+      const playerAttack = Math.max(...G.fight.player) + currentPlayer(G, ctx).strength
+      const monsterRoll = G.rollingDices
+      const highestValues = monsterRoll.filter((die) => die === Math.max(...monsterRoll))
+      const monsterAttack = highestValues.reduce((a, b) => a + b, 0) + monster.strength
+      const fightResult = playerAttack - monsterAttack
+      if (fightResult > 0) {
+        monster.willpower -= fightResult
+        summary += `<p>The ${monster.type} lost ${fightResult} willpower${fightResult > 1 ? 's' : ''}.</p>`
+      } else if (fightResult < 0) {
+        G.players[ctx.currentPlayer].willpower += fightResult
+        summary += `<p>${currentPlayer(G, ctx).name} lost ${fightResult} willpower${fightResult > 1 ? 's' : ''}.</p>`
+      } else {
+        summary += `<p>The fight ended in a draw.</p>`
+      }
+
+      if (monster.willpower < 1) {
+        monster.positionOnMap = 80
+        G.letter = String.fromCharCode(G.letter.charCodeAt(0) + 1)
+        if (G.letter === 'C') {
+          G.monsters.push({
+            type: 'Gor',
+            numDice: [2, 3, 3],
+            willpower: 4,
+            strength: 2,
+            reward: {
+              gold: 2,
+              willpower: 2,
+            },
+            startingPos: 32,
+            positionOnMap: 32,
+          })
+          G.monsters.push({
+            type: 'Skrall',
+            numDice: [2, 3, 3],
+            willpower: 6,
+            reward: {
+              gold: 4,
+              willpower: 4,
+            },
+            strength: 6,
+            startingPos: 39,
+            positionOnMap: 39,
+          })
+          if (G.difficulty !== 'easy') {
+            G.monsters.push({
+              type: 'Gor',
+              numDice: [2, 3, 3],
+              willpower: 4,
+              strength: 2,
+              reward: {
+                gold: 2,
+                willpower: 2,
+              },
+              startingPos: 43,
+              positionOnMap: 43,
+            })
+          }
+        }
+        G.players[ctx.currentPlayer].gold += monster.reward.gold
+        G.players[ctx.currentPlayer].willpower += monster.reward.willpower
+        summary += `<p>The ${monster.type} has been defeated!</p>
+        <p>${currentPlayer(G, ctx).name} received ${monster.reward.gold} golds and ${
+          monster.reward.willpower
+        } willpowers.</p>`
+      } else if (G.players[ctx.currentPlayer].willpower < 1) {
+        G.players[ctx.currentPlayer].willpower = 3
+        G.players[ctx.currentPlayer].strength = Math.max(G.players[ctx.currentPlayer].strength - 1, 0)
+        summary += `<p>${currentPlayer(G, ctx).name} has been defeated and now has ${Math.max(
+          G.players[ctx.currentPlayer].strength - 1,
+          0
+        )} strength point. ${currentPlayer(G, ctx).name} willpower were reset to 3.</p>`
+      }
+      monsters.push(monster)
+      G.monsters = monsters
+      G.players[ctx.currentPlayer].hoursPassed += 1
+      G.status = 'fight summary'
+      G.fight = {
+        result: {
+          player: { name: currentPlayer(G, ctx).name, attack: playerAttack },
+          monster: { name: monster.type, attack: monsterAttack },
+          summary,
+        },
+      }
+      G.dices = []
+      G.rollingDices = null
+    },
+    clearStatus: (G, ctx, endTurn) => {
+      if (endTurn) {
+        G.fight = {}
+        ctx.events.endTurn()
+      }
+      G.status = null
     },
   },
 
@@ -271,7 +420,9 @@ const LegendOfAndor = {
       ctx.events.setActivePlayers({ others: 'displayMapInput', currentPlayer: 'play' })
     },
     onEnd: (G, ctx) => {
+      Object.keys(G.players).map((playerID) => (G.players[playerID].path = []))
       if (Object.keys(G.players).every((playerID) => G.players[playerID].endDay)) {
+        G.status = 'new day'
         // moveMonsters
         const gors = G.monsters.filter((monster) => monster.type === 'Gor')
         let newGors = []
@@ -282,7 +433,10 @@ const LegendOfAndor = {
           } while (pos !== 0 && G.monsters.map((monster) => monster.positionOnMap).includes(pos))
           if (pos === 0) {
             G.castleDefense--
-            if (G.castleDefense < 0) ctx.events.endGame()
+            if (G.castleDefense < 0) {
+              G.status = 'game over'
+              ctx.events.endGame()
+            }
           } else {
             gor.positionOnMap = pos
             let farmerPos = G.tokens.findIndex((token) => token.type === 'farmer' && token.positionOnMap === pos)
@@ -301,7 +455,10 @@ const LegendOfAndor = {
           } while (pos !== 0 && G.monsters.map((monster) => monster.positionOnMap).includes(pos))
           if (pos === 0) {
             G.castleDefense--
-            if (G.castleDefense < 0) ctx.events.endGame()
+            if (G.castleDefense < 0) {
+              G.status = 'game over'
+              ctx.events.endGame()
+            }
           } else {
             skrall.positionOnMap = pos
             let farmerPos = G.tokens.findIndex((token) => token.type === 'farmer' && token.positionOnMap === pos)
@@ -314,6 +471,46 @@ const LegendOfAndor = {
         G.monsters = newGors.concat(newSkralls)
         // increment narrator
         G.letter = String.fromCharCode(G.letter.charCodeAt(0) + 1)
+        if (G.letter === 'C') {
+          G.monsters.push({
+            type: 'Gor',
+            numDice: [2, 3, 3],
+            willpower: 4,
+            strength: 2,
+            reward: {
+              gold: 2,
+              willpower: 2,
+            },
+            startingPos: 32,
+            positionOnMap: 32,
+          })
+          G.monsters.push({
+            type: 'Skrall',
+            numDice: [2, 3, 3],
+            willpower: 6,
+            reward: {
+              gold: 4,
+              willpower: 4,
+            },
+            strength: 6,
+            startingPos: 39,
+            positionOnMap: 39,
+          })
+          if (G.difficulty !== 'easy') {
+            G.monsters.push({
+              type: 'Gor',
+              numDice: [2, 3, 3],
+              willpower: 4,
+              strength: 2,
+              reward: {
+                gold: 2,
+                willpower: 2,
+              },
+              startingPos: 43,
+              positionOnMap: 43,
+            })
+          }
+        }
         // refill wells
         let tokens = G.tokens
         const charactersPos = Object.keys(G.players).map((playerID) => G.players[playerID].positionOnMap)
@@ -326,6 +523,8 @@ const LegendOfAndor = {
         G.tokens = nonWellTokens.concat(newWellTokens)
         // reset day
         Object.keys(G.players).forEach((playerID) => (G.players[playerID].endDay = false))
+      } else {
+        G.status = 'next turn'
       }
     },
     endIf: (G, ctx) => G.players[ctx.currentPlayer].endDay,
@@ -361,7 +560,8 @@ const LegendOfAndor = {
 
   endIf: (G, ctx) => {
     if (G.letter === 'N') {
-      return { winner: ctx.currentPlayer }
+      if (G.monsters.filter((monster) => monster.type === 'Skrall').length > 0) return 'You have lost the game'
+      else return 'You have won the game'
     }
   },
 

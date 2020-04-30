@@ -16,7 +16,7 @@ import ResourceSplit from '../modals/ResourceSplit'
 import { BsSkipForwardFill } from 'react-icons/bs'
 import 'react-tiny-fab/dist/styles.css'
 import narratorToken from '../assets/images/tokens/narrator.png'
-
+import { GiFarmer } from 'react-icons/gi'
 export default class GameBoard extends Component {
   MAP
   areas
@@ -25,13 +25,16 @@ export default class GameBoard extends Component {
   constructor(props) {
     super(props)
     const heroeslist = []
+    let namelist = []
     this.playerCharacters = {}
     this.monsterCharacters = {}
     this.tokens = {}
     this.playersColor = []
+    this.playerName = this.props.gameMetadata[props.ctx.currentPlayer].name.split(separator)[0]
     Object.keys(this.props.gameMetadata).forEach((player) => {
       const heroName = this.props.gameMetadata[player].name.split(separator)[1]
       heroeslist.push(heroName)
+      namelist.push(this.props.gameMetadata[player].name.split(separator)[0])
       this.playerCharacters[player] = require(`../assets/images/characters/pawns/${heroName}.png`)
       this.playersColor.push(heroes[heroName].color)
     })
@@ -73,7 +76,7 @@ export default class GameBoard extends Component {
       openDice: false,
     }
 
-    !this.props.G.init && this.props.moves.setupData(heroeslist)
+    !this.props.G.init && this.props.moves.setupData(heroeslist, namelist)
   }
 
   handleResize = () =>
@@ -81,6 +84,17 @@ export default class GameBoard extends Component {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
     })
+
+  arrayEquals = (array1, array2) => {
+    if (!array1 || !array2) return false
+    if (array1.length !== array2.length) return false
+    return array1.every((val, index) => val === array2[index])
+  }
+  componentDidUpdate(prevProps) {
+    if (this.props.G.rollingDices && !this.arrayEquals(prevProps.G.rollingDices, this.props.G.rollingDices)) {
+      this.setState({ openDice: true })
+    }
+  }
 
   componentDidMount() {
     window.addEventListener('resize', this.handleResize)
@@ -95,6 +109,8 @@ export default class GameBoard extends Component {
   }
 
   isActivePlayer = () => this.props.playerID === this.props.ctx.currentPlayer
+  getTurnPlayer = () => this.props.G.players[this.props.ctx.currentPlayer]
+  getMyPlayer = () => this.props.G.players[this.props.playerID]
 
   clicked(area) {
     const to = parseInt(area.name)
@@ -136,7 +152,6 @@ export default class GameBoard extends Component {
       (playerID) => this.props.G.players[playerID].positionOnMap === position
     )
     const charactersInArea = heroesInArea.concat(monstersInArea)
-    console.log('charactersInArea', charactersInArea)
     const pos = charactersInArea.findIndex((character) => {
       if (typeof character === 'string') {
         return character === id
@@ -271,10 +286,88 @@ export default class GameBoard extends Component {
     return hoveredAreas
   }
 
-  rollDices = () => {
-    if (this.isActivePlayer()) {
-      this.props.moves.startRollDices()
-      this.setState({ openDice: true })
+  pickDropFarmer = () => {
+    const farmerTokenIndex = this.props.G.tokens.findIndex(
+      (token) => token.type === 'farmer' && token.positionOnMap === this.getMyPlayer().positionOnMap
+    )
+    if (farmerTokenIndex > -1) {
+      const startPos = this.props.G.tokens[farmerTokenIndex].startingPos
+      if (!this.props.G.tokens[farmerTokenIndex].picked) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Farmer picked!',
+          text: `Bring him to the castle to increase the castle defense.`,
+        })
+        this.props.moves.pickFarmer(farmerTokenIndex)
+      } else if (this.props.G.tokens[farmerTokenIndex].picked && this.getMyPlayer().pickedFarmer.includes(startPos)) {
+        let text = ''
+        if (this.getMyPlayer().positionOnMap === 0) {
+          text = `You brought the farmer to the castle! The castle defense has increased to ${
+            this.props.G.castleDefense + 1
+          }`
+        } else {
+          text = `You left the farmer at tile ${
+            this.getMyPlayer().positionOnMap
+          }. If a monster reaches him, he's toast!`
+        }
+        Swal.fire({
+          icon: this.getMyPlayer().positionOnMap === 0 ? 'success' : 'info',
+          title: 'Farmer dropped!',
+          text,
+        })
+        this.props.moves.dropFarmer(farmerTokenIndex)
+      }
+    }
+  }
+
+  drink = () => {
+    const wellTokenIndex = this.props.G.tokens.findIndex(
+      (token) => token.type === 'well' && token.positionOnMap === this.getMyPlayer().positionOnMap
+    )
+    if (wellTokenIndex > -1 && !this.props.G.tokens[wellTokenIndex].used) {
+      const willpower = this.getMyPlayer().specialAbilities.wellPower ? 5 : 3
+      Swal.fire({
+        icon: 'success',
+        title: 'Yummy!',
+        text: `You drank from the well and gained ${willpower} willpowers`,
+      })
+      this.props.moves.drink(wellTokenIndex, willpower)
+    }
+  }
+
+  fight = () => {
+    const position = this.getTurnPlayer().positionOnMap
+    const hoursPassed = this.getTurnPlayer().hoursPassed
+    const monsters = this.props.G.monsters.filter((monster) => {
+      return (
+        monster.positionOnMap === position ||
+        (this.getTurnPlayer().specialAbilities.proxyAttack && tiles.neighbors[position].includes(monster.positionOnMap))
+      )
+    })
+    console.log('monsters', monsters)
+    if (this.isActivePlayer() && monsters.length > 0 && hoursPassed < 10) {
+      if (hoursPassed < 7 || (hoursPassed >= 7 && this.getTurnPlayer().willpower >= 3)) {
+        this.props.moves.startFight()
+        this.setState({ openDice: true })
+      }
+    }
+  }
+
+  finishRoll = () => {
+    if (this.props.G.rollingDices) {
+      if ('player' in this.props.G.fight) {
+        this.props.moves.endFight()
+      } else {
+        const position = this.getTurnPlayer().positionOnMap
+        const monster = this.props.G.monsters.filter((monster) => {
+          return (
+            monster.positionOnMap === position ||
+            (this.getTurnPlayer().specialAbilities.proxyAttack && tiles.neighbors[position].includes(monster.positionOnMap))
+          )
+        })[0]
+        console.log('this.props.G.rollingDices', this.props.G.rollingDices)
+        this.props.moves.monsterAttack(monster)
+      }
     }
   }
 
@@ -359,6 +452,61 @@ export default class GameBoard extends Component {
     })
   }
 
+  displayStatusMessage() {
+    const status = this.props.G.status
+    if (status) {
+      let title = ''
+      let html = ''
+      let timer = 1000
+      if (status === 'new day') {
+        title = 'A new day has started'
+        timer = 6000
+        html = `<div>
+        <p>Castle health: ${this.props.G.castleDefense}</p>
+        <p>Narrator: ${this.props.G.letter}</p>
+        <p># of monsters remaining: ${this.props.G.monsters.length}</p>
+        </div>`
+      } else if (status === 'next turn') {
+        title = `${this.playerName} turn ended`
+        timer = 1000
+      } else if (status === 'fight summary') {
+        title = 'Fight Summary'
+        if (this.props.G.fight.result) {
+          const { monster, player, summary } = this.props.G.fight.result
+          html = `
+        <div>
+          <div>
+            <div>${player.name}: ${player.attack}</div>
+            <div>${monster.name}: ${monster.attack}</div>
+          </div>
+          <div>${summary}</div>
+        </div>`
+          timer = 6000
+        }
+      } else if (status === 'game over') {
+        title = 'Game Over'
+        html = 'You lost, loser.'
+        timer = 10000000000
+      }
+      Swal.fire({
+        title,
+        html,
+        timer,
+        timerProgressBar: true,
+        onBeforeOpen: () => {
+          status !== 'game over' && Swal.showLoading()
+        },
+      }).then((result) => {
+        let endTurn = status === 'fight summary'
+        status !== 'game over' && this.props.moves.clearStatus(endTurn)
+        /* Read more about handling dismissals below */
+        if (result.dismiss === Swal.DismissReason.timer) {
+          console.log('I was closed by the timer')
+        }
+      })
+    }
+  }
+
   render() {
     const override = css`
       position: absolute;
@@ -413,20 +561,20 @@ export default class GameBoard extends Component {
             icon={<Icon name="add" />}
             alwaysShowTitle={true}
           >
-            <Action text="Drink" onClick={() => this.props.moves.drink()}>
+            <Action text="Drink" onClick={() => this.drink()}>
               <IoIosWater />
             </Action>
             <Action text="Collect" onClick={() => console.log('collecting coins')}>
               <RiHandCoinLine />
             </Action>
-            <Action text="Fight" onClick={() => this.rollDices()}>
+            <Action text="Drop/Pick Farmer" onClick={() => this.pickDropFarmer()}>
+              <GiFarmer />
+            </Action>
+            <Action text="Fight" onClick={() => this.fight()}>
               <RiSwordLine />
             </Action>
             <Action text="Skip Turn" onClick={() => this.props.moves.skipTurn()}>
               <BsSkipForwardFill />
-            </Action>
-            <Action text="End Turn" onClick={() => this.props.moves.endTurn()}>
-              <Icon name="flag checkered" />
             </Action>
             <Action text="End Day" onClick={() => this.props.moves.endDay()}>
               <Icon name="bed" />
@@ -435,10 +583,11 @@ export default class GameBoard extends Component {
         </React.Fragment>
         <DicesWindow
           open={this.state.openDice}
+          fight={this.props.G.fight}
           handleClose={() => this.setState({ openDice: false })}
           color={this.playersColor[this.props.playerID]}
           rollingDices={this.props.G.rollingDices}
-          onFinishRoll={() => this.props.moves.finishRollDices()}
+          onFinishRoll={() => this.finishRoll()}
         />
         <ResourceSplit
           splitResource={this.props.moves.splitResource}
@@ -448,6 +597,7 @@ export default class GameBoard extends Component {
           open={this.props.G.splittableResource.length > 0}
           names={this.props.gameMetadata.map((player) => player.name.split(separator)[0])}
         />
+        {this.displayStatusMessage()}
       </div>
     )
   }

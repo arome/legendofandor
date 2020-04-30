@@ -115,7 +115,7 @@ const neighbors = {
   21: [4, 5, 20, 22, 24],
   22: [19, 20, 21, 23, 24, 72],
   23: [19, 22, 24, 25, 31, 34, 35, 72],
-  24: [20, 21, 2, 23, 25],
+  24: [20, 21, 22, 23, 25],
   25: [23, 24, 26, 27, 31],
   26: [25, 27],
   27: [25, 26, 31],
@@ -324,4 +324,4 @@ for (const tile in neighbors) {
 
 const dijkstra = new jKstra.algos.Dijkstra(graph)
 
-export default { graph, hours, dijkstra, wellAreas, fogAreas, narratorAreas, nextTile }
+export default { graph, hours, dijkstra, wellAreas, fogAreas, narratorAreas, neighbors, nextTile }
