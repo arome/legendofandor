@@ -109,6 +109,16 @@ const allPlayersMove = {
     }
     G.tokens = tokens
   },
+  clearStatus: (G, ctx, endTurn) => {
+    if (endTurn) {
+      G.fight = {}
+      ctx.events.endTurn()
+    }
+    G.status = null
+  },
+  sendMessage(G, ctx, message) {
+    G.messages.push(message)
+  },
 }
 
 const LegendOfAndor = {
@@ -158,7 +168,7 @@ const LegendOfAndor = {
         gold: 0,
         wineskin: 0,
         positionOnMap: 0,
-        dayEnd: false,
+        endDay: false,
         hoveredArea: null,
         path: [],
       }
@@ -204,6 +214,7 @@ const LegendOfAndor = {
       tokens,
       monsters,
       players,
+      messages: [],
       fight: {},
       status: null,
       castleDefense: 5 - ctx.numPlayers,
@@ -296,7 +307,6 @@ const LegendOfAndor = {
     endDay(G, ctx) {
       G.players[ctx.currentPlayer].endDay = true
       G.players[ctx.currentPlayer].hoursPassed = 0
-      ctx.events.endTurn()
     },
     startFight: (G, ctx) => {
       return { ...G, rollingDices: ctx.random.D6(numberOfDice(currentPlayer(G, ctx))) }
@@ -338,7 +348,8 @@ const LegendOfAndor = {
         monster.positionOnMap = 80
         G.letter = String.fromCharCode(G.letter.charCodeAt(0) + 1)
         if (G.letter === 'C') {
-          G.monsters.push({
+          let newMonsters = G.monsters
+          newMonsters.push({
             type: 'Gor',
             numDice: [2, 3, 3],
             willpower: 4,
@@ -350,7 +361,7 @@ const LegendOfAndor = {
             startingPos: 32,
             positionOnMap: 32,
           })
-          G.monsters.push({
+          newMonsters.push({
             type: 'Skrall',
             numDice: [2, 3, 3],
             willpower: 6,
@@ -363,7 +374,7 @@ const LegendOfAndor = {
             positionOnMap: 39,
           })
           if (G.difficulty !== 'easy') {
-            G.monsters.push({
+            newMonsters.push({
               type: 'Gor',
               numDice: [2, 3, 3],
               willpower: 4,
@@ -376,6 +387,7 @@ const LegendOfAndor = {
               positionOnMap: 43,
             })
           }
+          G.monsters = newMonsters
         }
         G.players[ctx.currentPlayer].gold += monster.reward.gold
         G.players[ctx.currentPlayer].willpower += monster.reward.willpower
@@ -405,13 +417,6 @@ const LegendOfAndor = {
       G.dices = []
       G.rollingDices = null
     },
-    clearStatus: (G, ctx, endTurn) => {
-      if (endTurn) {
-        G.fight = {}
-        ctx.events.endTurn()
-      }
-      G.status = null
-    },
   },
 
   turn: {
@@ -421,7 +426,11 @@ const LegendOfAndor = {
     },
     onEnd: (G, ctx) => {
       Object.keys(G.players).map((playerID) => (G.players[playerID].path = []))
-      if (Object.keys(G.players).every((playerID) => G.players[playerID].endDay)) {
+      if (
+        Object.keys(G.players).every((playerID) => {
+          return G.players[playerID].endDay
+        })
+      ) {
         G.status = 'new day'
         // moveMonsters
         const gors = G.monsters.filter((monster) => monster.type === 'Gor')
@@ -430,7 +439,7 @@ const LegendOfAndor = {
           let pos = gor.positionOnMap
           do {
             pos = tiles.nextTile[pos]
-          } while (pos !== 0 && G.monsters.map((monster) => monster.positionOnMap).includes(pos))
+          } while (pos !== 0 && pos !== 80 && G.monsters.map((monster) => monster.positionOnMap).includes(pos))
           if (pos === 0) {
             G.castleDefense--
             if (G.castleDefense < 0) {
@@ -470,9 +479,11 @@ const LegendOfAndor = {
         })
         G.monsters = newGors.concat(newSkralls)
         // increment narrator
-        G.letter = String.fromCharCode(G.letter.charCodeAt(0) + 1)
-        if (G.letter === 'C') {
-          G.monsters.push({
+        const newLetter = String.fromCharCode(G.letter.charCodeAt(0) + 1)
+        G.letter = newLetter
+        if (newLetter === 'C') {
+          let monsters = G.monsters
+          monsters.push({
             type: 'Gor',
             numDice: [2, 3, 3],
             willpower: 4,
@@ -484,7 +495,7 @@ const LegendOfAndor = {
             startingPos: 32,
             positionOnMap: 32,
           })
-          G.monsters.push({
+          monsters.push({
             type: 'Skrall',
             numDice: [2, 3, 3],
             willpower: 6,
@@ -497,7 +508,7 @@ const LegendOfAndor = {
             positionOnMap: 39,
           })
           if (G.difficulty !== 'easy') {
-            G.monsters.push({
+            monsters.push({
               type: 'Gor',
               numDice: [2, 3, 3],
               willpower: 4,
@@ -510,6 +521,7 @@ const LegendOfAndor = {
               positionOnMap: 43,
             })
           }
+          G.monsters = monsters
         }
         // refill wells
         let tokens = G.tokens

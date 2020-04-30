@@ -464,10 +464,12 @@ export default class GameBoard extends Component {
         html = `<div>
         <p>Castle health: ${this.props.G.castleDefense}</p>
         <p>Narrator: ${this.props.G.letter}</p>
-        <p># of monsters remaining: ${this.props.G.monsters.length}</p>
+        <p># of monsters remaining: ${
+          this.props.G.monsters.filter((monster) => monster.positionOnMap !== 80).length
+        }</p>
         </div>`
       } else if (status === 'next turn') {
-        title = `${this.playerName} turn ended`
+        title = `${this.props.G.players[this.props.ctx.currentPlayer].name} turn has started`
         timer = 1000
       } else if (status === 'fight summary') {
         title = 'Fight Summary'
@@ -585,7 +587,7 @@ export default class GameBoard extends Component {
           open={this.state.openDice}
           fight={this.props.G.fight}
           handleClose={() => this.setState({ openDice: false })}
-          color={this.playersColor[this.props.playerID]}
+          color={this.playersColor[this.props.ctx.currentPlayer]}
           rollingDices={this.props.G.rollingDices}
           onFinishRoll={() => this.finishRoll()}
         />
