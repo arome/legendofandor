@@ -309,7 +309,7 @@ export default class GameBoard extends Component {
   }
 
   getHoveredAreas() {
-    const numPlayers = this.props.G.players.length
+    const numPlayers = Object.keys(this.props.G.players).length
     const hoveredAreas = []
     for (let i = 0; i < numPlayers; i++) {
       const hoveredArea = this.props.G.players[i].hoveredArea
