@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom'
 import './index.scss'
 import App from './App'
 import * as serviceWorker from './serviceWorker'
-
+import { CometChat } from '@cometchat-pro/chat'
+import { appId } from './common'
 const background = require('./assets/images/Andor_HP_Art_06_01.jpg')
 
 const divStyle = {
@@ -13,6 +14,7 @@ const divStyle = {
   backgroundSize: '100% 100%',
 }
 
+CometChat.init(appId, new CometChat.AppSettingsBuilder().subscribePresenceForAllUsers().setRegion('us').build())
 ReactDOM.render(
   <div style={divStyle}>
     <App />

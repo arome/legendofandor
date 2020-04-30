@@ -8,7 +8,7 @@ import { css } from '@emotion/core'
 import { Icon } from 'semantic-ui-react'
 import { ClockLoader } from 'react-spinners'
 import { Fab, Action } from 'react-tiny-fab'
-import { separator, heroes } from '../common'
+import { separator, heroes, chatApiKey } from '../common'
 import { RiSwordLine, RiHandCoinLine } from 'react-icons/ri'
 import { IoIosWater } from 'react-icons/io'
 import DicesWindow from '../modals/DiceWindow'
@@ -17,6 +17,10 @@ import { BsSkipForwardFill } from 'react-icons/bs'
 import 'react-tiny-fab/dist/styles.css'
 import narratorToken from '../assets/images/tokens/narrator.png'
 import { GiFarmer } from 'react-icons/gi'
+import { Widget, addResponseMessage, addUserMessage } from 'react-chat-widget'
+import Cookies from 'react-cookies'
+import { CometChat } from '@cometchat-pro/chat'
+
 export default class GameBoard extends Component {
   MAP
   areas
@@ -30,7 +34,6 @@ export default class GameBoard extends Component {
     this.monsterCharacters = {}
     this.tokens = {}
     this.playersColor = []
-    this.playerName = this.props.gameMetadata[props.ctx.currentPlayer].name.split(separator)[0]
     Object.keys(this.props.gameMetadata).forEach((player) => {
       const heroName = this.props.gameMetadata[player].name.split(separator)[1]
       heroeslist.push(heroName)
@@ -98,6 +101,43 @@ export default class GameBoard extends Component {
 
   componentDidMount() {
     window.addEventListener('resize', this.handleResize)
+    const browserCookie = Cookies.load('lobby') || {}
+    if (this.props.gameID in browserCookie) {
+      const uid = browserCookie[this.props.gameID].uid
+      this.setState({ uid })
+      if (uid) {
+        CometChat.login(uid, chatApiKey).then(() => {
+          this.createMessageListener()
+          this.fetchPreviousMessages(uid)
+        })
+      }
+    }
+    this.playerName = this.props.gameMetadata[this.props.playerID].name.split(separator)[0]
+  }
+
+  createMessageListener = () => {
+    CometChat.addMessageListener(
+      'client-listener',
+      new CometChat.MessageListener({
+        onTextMessageReceived: (message) => {
+          addResponseMessage(message.text)
+        },
+      })
+    )
+  }
+
+  fetchPreviousMessages = (uid) => {
+    var messagesRequest = new CometChat.ConversationsRequestBuilder().setLimit(50).setConversationType('group').build()
+    messagesRequest.fetchNext().then((conversationList) => {
+      const message = conversationList[0].getLastMessage()
+      if (message.text) {
+        if (message.sender.uid !== uid) {
+          addResponseMessage(message.text)
+        } else {
+          addUserMessage(message.text)
+        }
+      }
+    })
   }
 
   componentWillUnmount() {
@@ -362,7 +402,8 @@ export default class GameBoard extends Component {
         const monster = this.props.G.monsters.filter((monster) => {
           return (
             monster.positionOnMap === position ||
-            (this.getTurnPlayer().specialAbilities.proxyAttack && tiles.neighbors[position].includes(monster.positionOnMap))
+            (this.getTurnPlayer().specialAbilities.proxyAttack &&
+              tiles.neighbors[position].includes(monster.positionOnMap))
           )
         })[0]
         console.log('this.props.G.rollingDices', this.props.G.rollingDices)
@@ -452,6 +493,15 @@ export default class GameBoard extends Component {
     })
   }
 
+  handleNewUserMessage = (newMessage) => {
+    var textMessage = new CometChat.TextMessage(
+      'legendofandor',
+      `${this.getMyPlayer().name}: ${newMessage}`,
+      CometChat.RECEIVER_TYPE.GROUP
+    )
+    CometChat.sendMessage(textMessage)
+  }
+
   displayStatusMessage() {
     const status = this.props.G.status
     if (status) {
@@ -501,10 +551,6 @@ export default class GameBoard extends Component {
       }).then((result) => {
         let endTurn = status === 'fight summary'
         status !== 'game over' && this.props.moves.clearStatus(endTurn)
-        /* Read more about handling dismissals below */
-        if (result.dismiss === Swal.DismissReason.timer) {
-          console.log('I was closed by the timer')
-        }
       })
     }
   }
@@ -599,6 +645,7 @@ export default class GameBoard extends Component {
           open={this.props.G.splittableResource.length > 0}
           names={this.props.gameMetadata.map((player) => player.name.split(separator)[0])}
         />
+        <Widget title="In Game Chat" subtitle="" handleNewUserMessage={this.handleNewUserMessage} />
         {this.displayStatusMessage()}
       </div>
     )

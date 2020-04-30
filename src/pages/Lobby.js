@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import background from '../assets/images/Lobby.jpg'
 import Cookies from 'react-cookies'
 import Axios from 'axios'
-import { server, name, separator } from '../common'
+import { server, name, separator, chatApiKey } from '../common'
 import { useParams, useHistory } from 'react-router-dom'
 import './Lobby.scss'
 import { Button } from 'semantic-ui-react'
@@ -11,22 +11,23 @@ import HeroSelectionModal from '../modals/HeroSelectionModal'
 import character from '../assets/images/characters/pictures/no_character.png'
 import { Icon } from 'semantic-ui-react'
 import { ClockLoader } from 'react-spinners'
-import { Widget, addResponseMessage } from 'react-chat-widget'
+import { Widget, addResponseMessage, addUserMessage } from 'react-chat-widget'
 import 'react-chat-widget/lib/styles.css'
-import socketIOClient from 'socket.io-client'
+import { CometChat } from '@cometchat-pro/chat'
 
 export default () => {
   const { gameID } = useParams()
   const history = useHistory()
-  const [socket, setSocket] = useState(null)
   const [playerName, setPlayerName] = useState('')
   const [playerID, setPlayerID] = useState(null)
   const [players, setPlayers] = useState([])
+  const [uid, setUid] = useState(null)
   const [credentials, setCredentials] = useState('')
   const [openPlayerName, setOpenPlayerName] = useState(false)
   const [openHeroSelection, setOpenHeroSelection] = useState(false)
   const [loading, setLoading] = useState(true)
   const [heroLoader, setHeroLoader] = useState(false)
+  const CUSTOMER_MESSAGE_LISTENER_KEY = 'client-listener'
 
   const handleClosePlayerName = () => {
     setOpenPlayerName(false)
@@ -56,6 +57,28 @@ export default () => {
       setCredentials(credentials)
       setPlayerName(playerName)
       updateCookie({ credentials, playerID, playerName })
+
+      const uid = new Date().getTime().toString()
+      var user = new CometChat.User(uid)
+      user.setName(playerName)
+      CometChat.createUser(user, chatApiKey)
+        .then(() => {
+          CometChat.login(uid, chatApiKey).then(() =>
+            CometChat.joinGroup('legendofandor', CometChat.GROUP_TYPE.PUBLIC).then(
+              (group) => {
+                console.log('Group joined successfully:', group)
+                setUid(uid)
+                updateCookie({ uid })
+                createMessageListener()
+                fetchPreviousMessages(uid)
+              },
+              (error) => {
+                console.log('Group joining failed with exception:', error)
+              }
+            )
+          )
+        })
+        .catch((e) => console.log('user creation failed e:', e))
     })
   }
 
@@ -91,13 +114,30 @@ export default () => {
       .catch((e) => console.log('error', e))
   }
 
-  useEffect(() => {
-    const socket = socketIOClient(server)
-    socket.on('new message', (data) => {
-      addResponseMessage(`__${data.username}__: ${data.message}`)
+  const createMessageListener = () => {
+    CometChat.addMessageListener(
+      CUSTOMER_MESSAGE_LISTENER_KEY,
+      new CometChat.MessageListener({
+        onTextMessageReceived: (message) => {
+          addResponseMessage(message.text)
+        },
+      })
+    )
+  }
+
+  const fetchPreviousMessages = (uid) => {
+    var messagesRequest = new CometChat.ConversationsRequestBuilder().setLimit(50).setConversationType('group').build()
+    messagesRequest.fetchNext().then((conversationList) => {
+      const message = conversationList[0].getLastMessage()
+      if (message.text) {
+        if (message.sender.uid !== uid) {
+          addResponseMessage(message.text)
+        } else {
+          addUserMessage(message.text)
+        }
+      }
     })
-    setSocket(socket)
-  }, [])
+  }
 
   useEffect(() => {
     const browserCookie = Cookies.load('lobby') || {}
@@ -105,7 +145,18 @@ export default () => {
       setPlayerName(browserCookie[gameID].playerName)
       setCredentials(browserCookie[gameID].credentials)
       setPlayerID(browserCookie[gameID].playerID)
+      const uid = browserCookie[gameID].uid?.toString()
+      setUid(uid)
+      if (uid) {
+        CometChat.login(uid, chatApiKey).then(() => {
+          createMessageListener()
+          fetchPreviousMessages(uid)
+        })
+      }
     }
+  }, [])
+
+  useEffect(() => {
     const interval = setInterval(() => {
       Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
         const players = res.data.players
@@ -179,8 +230,13 @@ export default () => {
     return status
   }
 
-  const newMessage = (message) => {
-    socket.emit('new message', { username: playerName.split(separator)[0] || 'Spectator', message })
+  const handleNewUserMessage = (newMessage) => {
+    var textMessage = new CometChat.TextMessage(
+      'legendofandor',
+      `${playerName.split(separator)[0]}: ${newMessage}`,
+      CometChat.RECEIVER_TYPE.GROUP
+    )
+    CometChat.sendMessage(textMessage)
   }
 
   return (
@@ -220,13 +276,15 @@ export default () => {
             {displayStatus()}
           </React.Fragment>
         )}
-        <Widget
-          title={`${players.filter((player) => player.name).length} player${
-            players.filter((player) => player.name).length > 1 ? 's' : ''
-          } joined`}
-          subtitle=""
-          handleNewUserMessage={newMessage}
-        />
+        {uid && (
+          <Widget
+            title={`${players.filter((player) => player.name).length} player${
+              players.filter((player) => player.name).length > 1 ? 's' : ''
+            } joined`}
+            subtitle=""
+            handleNewUserMessage={handleNewUserMessage}
+          />
+        )}
       </div>
       <PlayerNameModal
         open={openPlayerName}

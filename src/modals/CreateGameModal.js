@@ -5,19 +5,26 @@ import './CreateGameModal.scss'
 import axios from 'axios'
 import LOA from '../game'
 import { server } from '../common'
+import { CometChat } from '@cometchat-pro/chat'
 
 const CreateGameModal = (props) => {
+  const [loading, setLoading] = useState(false)
   const [difficulty, setDifficulty] = useState('easy')
   const [numPlayers, setNumPlayers] = useState(2)
   const history = useHistory()
 
   const handleSubmit = (event) => {
+    setLoading(true)
     event.preventDefault()
     const setupData = { difficulty }
-    axios.post(`${server}/games/${LOA.name}/create`, { numPlayers, setupData }).then((res) => {
-      const { gameID } = res.data
-      history.push(`/lobby/${gameID}`)
-    })
+    axios
+      .post(`${server}/games/${LOA.name}/create`, { numPlayers, setupData })
+      .then((res) => {
+        const { gameID } = res.data
+        setLoading(false)
+        history.push(`/lobby/${gameID}`)
+      })
+      .catch((e) => setLoading(false))
   }
 
   return (
@@ -53,7 +60,7 @@ const CreateGameModal = (props) => {
             />
           </Form.Group>
           <Form.Group>
-            <Form.Button>Create Game</Form.Button>
+            <Form.Button loading={loading}>Create Game</Form.Button>
           </Form.Group>
         </Form>
       </Modal.Content>
