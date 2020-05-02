@@ -5,8 +5,6 @@ import './CreateGameModal.scss'
 import axios from 'axios'
 import LOA from '../game'
 import { server } from '../common'
-import { CometChat } from '@cometchat-pro/chat'
-
 const CreateGameModal = (props) => {
   const [loading, setLoading] = useState(false)
   const [difficulty, setDifficulty] = useState('easy')

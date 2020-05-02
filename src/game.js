@@ -1,5 +1,4 @@
 import tiles from './pages/tiles'
-import { Stage } from 'boardgame.io/core'
 import { heroes, name } from './common'
 
 function distance(from, to) {
@@ -88,12 +87,8 @@ const allPlayersMove = {
     G.tokens = tokens
   },
   pickFarmer(G, ctx, farmerTokenIndex) {
-    let tokens = G.tokens
-    let farmer = tokens.splice(farmerTokenIndex, 1)[0]
-    farmer.picked = true
-    G.players[ctx.playerID].pickedFarmer.push(farmer.startingPos)
-    tokens.push(farmer)
-    G.tokens = tokens
+    G.tokens[farmerTokenIndex].picked = true
+    G.players[ctx.playerID].pickedFarmer.push(G.tokens[farmerTokenIndex].startingPos)
   },
   dropFarmer(G, ctx, farmerTokenIndex) {
     let tokens = G.tokens
@@ -300,7 +295,7 @@ const LegendOfAndor = {
     startFight: (G, ctx, position) => {
       return {
         ...G,
-        fight: { monster: { position } },
+        fight: { turn: 'player', monster: { position } },
         rollingDices: ctx.random.D6(numberOfDice(currentPlayer(G, ctx))),
       }
     },
@@ -310,9 +305,9 @@ const LegendOfAndor = {
       if (currentPlayer(G, ctx).specialAbilities.flipDice) {
         newValue = [G.rollingDices[0] < 4 ? 7 - G.rollingDices[0] : G.rollingDices[0]]
       }
-      let fight = G.fight
-      fight['player'] = newValue
-      return { ...G, fight, rollingDices: ctx.random.D6(numberOfDice(monster)) }
+      G.fight['player'] = newValue
+      G.fight['turn'] = 'monster'
+      G.rollingDices = ctx.random.D6(numberOfDice(monster))
     },
     endFight: (G, ctx) => {
       let summary = ''

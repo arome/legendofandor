@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Modal } from 'semantic-ui-react'
 import { RiCoinLine } from 'react-icons/ri'
 import { IoMdWine } from 'react-icons/io'

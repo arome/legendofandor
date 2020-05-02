@@ -148,7 +148,7 @@ export default () => {
         })
       }
     }
-  }, [])
+  }, [gameID])
 
   useEffect(() => {
     const interval = setInterval(() => {

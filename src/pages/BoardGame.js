@@ -6,8 +6,8 @@ import board from './Board'
 import { server } from '../common'
 import { useLocation } from 'react-router-dom'
 
-import logger from 'redux-logger'
-import { applyMiddleware } from 'redux'
+// import logger from 'redux-logger'
+// import { applyMiddleware } from 'redux'
 
 export default () => {
   const location = useLocation()

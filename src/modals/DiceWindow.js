@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 
-import { Modal, Divider } from 'semantic-ui-react'
+import { Modal } from 'semantic-ui-react'
 import Dices3d, { DICE_TYPES } from '../libs/react-dice-3d'
 import './DiceWindow.scss'
 

@@ -34,13 +34,13 @@ export default class GameBoard extends Component {
     this.monsterCharacters = {}
     this.tokens = {}
     this.playersColor = []
-    Object.keys(this.props.gameMetadata).forEach((player) => {
-      const heroName = this.props.gameMetadata[player].name.split(separator)[1]
+    for (let i = 0; i < props.ctx.numPlayers; i++) {
+      const heroName = this.props.gameMetadata[i].name.split(separator)[1]
       heroeslist.push(heroName)
-      namelist.push(this.props.gameMetadata[player].name.split(separator)[0])
-      this.playerCharacters[player] = require(`../assets/images/characters/pawns/${heroName}.png`)
+      namelist.push(this.props.gameMetadata[i].name.split(separator)[0])
+      this.playerCharacters[i] = require(`../assets/images/characters/pawns/${heroName}.png`)
       this.playersColor.push(heroes[heroName].color)
-    })
+    }
     const monsterTypes = ['Gor', 'Skrall']
     const tokenTypes = ['fog', 'well', 'farmer', 'empty-well']
 
@@ -224,13 +224,9 @@ export default class GameBoard extends Component {
 
   getTokenPosition(area) {
     const center = this.computeCenter(area)
-    const horizontalTranslation = this.getCharacterSize().width / 2
-    const veritcalTranslation = (this.getCharacterSize().heigth * 2) / 5
-    let topPosition = center[1]
-    let leftPosition = center[0]
     return {
-      top: `${topPosition}px`,
-      left: `${leftPosition}px`,
+      top: `${center[1]}px`,
+      left: `${center[0]}px`,
     }
   }
 
@@ -277,7 +273,7 @@ export default class GameBoard extends Component {
     )
     // Calculate centroid
     if (scaledCoords.length === 3) {
-      const [x, y, radius] = scaledCoords
+      const [x, y] = scaledCoords
       return [x, y]
     }
     const n = scaledCoords.length / 2
@@ -291,7 +287,7 @@ export default class GameBoard extends Component {
   }
 
   getPaths() {
-    const numPlayers = Object.keys(this.props.G.players).length
+    const numPlayers = this.props.ctx.numPlayers
     const paths = []
     for (let i = 0; i < numPlayers; i++)
       if (i !== parseInt(this.props.playerID))
@@ -309,7 +305,7 @@ export default class GameBoard extends Component {
   }
 
   getHoveredAreas() {
-    const numPlayers = Object.keys(this.props.G.players).length
+    const numPlayers = this.props.ctx.numPlayers
     const hoveredAreas = []
     for (let i = 0; i < numPlayers; i++) {
       const hoveredArea = this.props.G.players[i].hoveredArea
@@ -326,56 +322,77 @@ export default class GameBoard extends Component {
     return hoveredAreas
   }
 
+  canPickFarmer = () => {
+    const farmers = this.props.G.tokens
+      .filter((token) => token.type === 'farmer' && token.positionOnMap === this.getMyPlayer().positionOnMap)
+      .map((farmer) => farmer.startingPos)
+    if (farmers.length > 0) {
+      farmers.some((farmerPosition) => {
+        for (let i = 0; i < this.props.ctx.numPlayers; i++)
+          if (this.props.G.players[i].pickedFarmer.includes(farmerPosition)) return false
+        return true
+      })
+    } else {
+      return false
+    }
+  }
+
+  canDropFarmer = () => {
+    return this.getMyPlayer().pickedFarmer.length > 0
+  }
+
   pickDropFarmer = () => {
     const farmerTokenIndex = this.props.G.tokens.findIndex(
       (token) => token.type === 'farmer' && token.positionOnMap === this.getMyPlayer().positionOnMap
     )
-    if (farmerTokenIndex > -1) {
-      const startPos = this.props.G.tokens[farmerTokenIndex].startingPos
-      if (!this.props.G.tokens[farmerTokenIndex].picked) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Farmer picked!',
-          text: `Bring him to the castle to increase the castle defense.`,
-        })
-        this.props.moves.pickFarmer(farmerTokenIndex)
-      } else if (this.props.G.tokens[farmerTokenIndex].picked && this.getMyPlayer().pickedFarmer.includes(startPos)) {
-        let text = ''
-        if (this.getMyPlayer().positionOnMap === 0) {
-          text = `You brought the farmer to the castle! The castle defense has increased to ${
-            this.props.G.castleDefense + 1
-          }`
-        } else {
-          text = `You left the farmer at tile ${
-            this.getMyPlayer().positionOnMap
-          }. If a monster reaches him, he's toast!`
-        }
-        Swal.fire({
-          icon: this.getMyPlayer().positionOnMap === 0 ? 'success' : 'info',
-          title: 'Farmer dropped!',
-          text,
-        })
-        this.props.moves.dropFarmer(farmerTokenIndex)
+    const startPos = this.props.G.tokens[farmerTokenIndex].startingPos
+    if (!this.props.G.tokens[farmerTokenIndex].picked) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Farmer picked!',
+        text: `Bring him to the castle to increase the castle defense.`,
+      })
+      this.props.moves.pickFarmer(farmerTokenIndex)
+    } else if (this.props.G.tokens[farmerTokenIndex].picked && this.getMyPlayer().pickedFarmer.includes(startPos)) {
+      let text = ''
+      if (this.getMyPlayer().positionOnMap === 0) {
+        text = `You brought the farmer to the castle! The castle defense has increased to ${
+          this.props.G.castleDefense + 1
+        }`
+      } else {
+        text = `You left the farmer at tile ${this.getMyPlayer().positionOnMap}. If a monster reaches him, he's toast!`
       }
+      Swal.fire({
+        icon: this.getMyPlayer().positionOnMap === 0 ? 'success' : 'info',
+        title: 'Farmer dropped!',
+        text,
+      })
+      this.props.moves.dropFarmer(farmerTokenIndex)
     }
+  }
+
+  canDrink = () => {
+    const { tokens } = this.props.G
+    const wellTokenIndex = tokens.findIndex(
+      (token) => token.type === 'well' && token.positionOnMap === this.getMyPlayer().positionOnMap
+    )
+    return wellTokenIndex > -1 && !tokens[wellTokenIndex].used
   }
 
   drink = () => {
     const wellTokenIndex = this.props.G.tokens.findIndex(
       (token) => token.type === 'well' && token.positionOnMap === this.getMyPlayer().positionOnMap
     )
-    if (wellTokenIndex > -1 && !this.props.G.tokens[wellTokenIndex].used) {
-      const willpower = this.getMyPlayer().specialAbilities.wellPower ? 5 : 3
-      Swal.fire({
-        icon: 'success',
-        title: 'Yummy!',
-        text: `You drank from the well and gained ${willpower} willpowers`,
-      })
-      this.props.moves.drink(wellTokenIndex, willpower)
-    }
+    const willpower = this.getMyPlayer().specialAbilities.wellPower ? 5 : 3
+    Swal.fire({
+      icon: 'success',
+      title: 'Yummy!',
+      text: `You drank from the well and gained ${willpower} willpowers`,
+    })
+    this.props.moves.drink(wellTokenIndex, willpower)
   }
 
-  fight = async () => {
+  canFight = () => {
     const position = this.getTurnPlayer().positionOnMap
     const hoursPassed = this.getTurnPlayer().hoursPassed
     const monsters = this.props.G.monsters.filter(
@@ -383,35 +400,43 @@ export default class GameBoard extends Component {
         monster.positionOnMap === position ||
         (this.getTurnPlayer().specialAbilities.proxyAttack && tiles.neighbors[position].includes(monster.positionOnMap))
     )
-
     if (this.isActivePlayer() && monsters.length > 0 && hoursPassed < 10) {
       if (hoursPassed < 7 || (hoursPassed >= 7 && this.getTurnPlayer().willpower >= 3)) {
-        if (monsters.length > 1) {
-          let inputOptions = {}
-          monsters.forEach((monster) => (inputOptions[monster.type] = monster.positionOnMap))
-          const { type: positionMonster } = await Swal.fire({
-            title: 'Which monster to attack',
-            input: 'select',
-            inputOptions,
-            inputPlaceholder: 'Select a monster',
-            showCancelButton: true,
-          })
-          this.props.moves.startFight(positionMonster)
-          this.setState({ openDice: true })
-        } else {
-          this.props.moves.startFight(position)
-          this.setState({ openDice: true })
-        }
+        return true
       }
+    }
+    return false
+  }
+
+  fight = async () => {
+    const position = this.getTurnPlayer().positionOnMap
+    const monsters = this.props.G.monsters.filter(
+      (monster) =>
+        monster.positionOnMap === position ||
+        (this.getTurnPlayer().specialAbilities.proxyAttack && tiles.neighbors[position].includes(monster.positionOnMap))
+    )
+    if (monsters.length > 1) {
+      let inputOptions = {}
+      monsters.forEach((monster) => (inputOptions[monster.type] = monster.positionOnMap))
+      const { type: positionMonster } = await Swal.fire({
+        title: 'Which monster to attack',
+        input: 'select',
+        inputOptions,
+        inputPlaceholder: 'Select a monster',
+        showCancelButton: true,
+      })
+      this.props.moves.startFight(positionMonster)
+    } else {
+      this.props.moves.startFight(monsters[0].positionOnMap)
     }
   }
 
-  finishRoll = async () => {
+  finishRoll = () => {
     if (this.props.G.rollingDices) {
-      if ('player' in this.props.G.fight) {
-        this.props.moves.endFight()
+      if (this.props.G.fight.turn === 'player') {
+        this.isActivePlayer() && this.props.moves.monsterAttack()
       } else {
-        this.props.moves.monsterAttack()
+        this.isActivePlayer() && this.props.moves.endFight()
       }
     }
   }
@@ -618,28 +643,59 @@ export default class GameBoard extends Component {
             }}
           />
           <Fab
-            mainButtonStyles={{ backgroundColor: this.playersColor[this.props.playerID] }}
-            actionButtonStyles={{ backgroundColor: this.playersColor[this.props.playerID] }}
+            mainButtonStyles={{ backgroundColor: this.playersColor[this.props.ctx.currentPlayer] }}
             position={{ bottom: 50, right: 50 }}
             icon={<Icon name="add" />}
             alwaysShowTitle={true}
           >
-            <Action text="Drink" onClick={() => this.drink()}>
+            <Action
+              text="Drink"
+              onClick={() => this.canDrink() && this.drink()}
+              style={this.canDrink() ? { backgroundColor: this.playersColor[this.props.playerID] } : {}}
+            >
               <IoIosWater />
             </Action>
-            <Action text="Collect" onClick={() => console.log('collecting coins')}>
+            <Action
+              text="Collect"
+              onClick={() => false && console.log('collecting coins')}
+              style={false ? { backgroundColor: this.playersColor[this.props.playerID] } : {}}
+            >
               <RiHandCoinLine />
             </Action>
-            <Action text="Drop/Pick Farmer" onClick={() => this.pickDropFarmer()}>
+            <Action
+              text="Drop/Pick Farmer"
+              onClick={() => (this.canPickFarmer() || this.canDropFarmer()) && this.pickDropFarmer()}
+              style={
+                this.canPickFarmer() || this.canDropFarmer()
+                  ? { backgroundColor: this.playersColor[this.props.playerID] }
+                  : {}
+              }
+            >
               <GiFarmer />
             </Action>
-            <Action text="Fight" onClick={() => this.fight()}>
+            <Action
+              text="Fight"
+              onClick={() => this.isActivePlayer() && this.canFight() && this.fight()}
+              style={
+                this.isActivePlayer() && this.canFight()
+                  ? { backgroundColor: this.playersColor[this.props.playerID] }
+                  : {}
+              }
+            >
               <RiSwordLine />
             </Action>
-            <Action text="Skip Turn" onClick={() => this.props.moves.skipTurn()}>
+            <Action
+              text="Skip Turn"
+              onClick={() => this.isActivePlayer() && this.props.moves.skipTurn()}
+              style={this.isActivePlayer() ? { backgroundColor: this.playersColor[this.props.playerID] } : {}}
+            >
               <BsSkipForwardFill />
             </Action>
-            <Action text="End Day" onClick={() => this.props.moves.endDay()}>
+            <Action
+              text="End Day"
+              onClick={() => this.isActivePlayer() && this.props.moves.endDay()}
+              style={this.isActivePlayer() ? { backgroundColor: this.playersColor[this.props.playerID] } : {}}
+            >
               <Icon name="bed" />
             </Action>
           </Fab>
