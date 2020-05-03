@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import background from '../assets/images/Lobby.jpg'
 import Cookies from 'react-cookies'
 import Axios from 'axios'
-import { server, name, separator, chatApiKey } from '../common'
+import { server, name, chatApiKey } from '../common'
 import { useParams, useHistory } from 'react-router-dom'
 import './Lobby.scss'
 import { Button } from 'semantic-ui-react'
@@ -14,11 +14,11 @@ import { ClockLoader } from 'react-spinners'
 import { Widget, addResponseMessage, addUserMessage } from 'react-chat-widget'
 import 'react-chat-widget/lib/styles.css'
 import { CometChat } from '@cometchat-pro/chat'
+import { HeroType, Hero } from '../models/Character'
 
 export default () => {
   const { gameID } = useParams()
   const history = useHistory()
-  const [playerName, setPlayerName] = useState('')
   const [playerID, setPlayerID] = useState<number | null>(null)
   const [players, setPlayers] = useState<any[]>([])
   const [uid, setUid] = useState<string | null>(null)
@@ -28,6 +28,7 @@ export default () => {
   const [loading, setLoading] = useState(true)
   const [heroLoader, setHeroLoader] = useState(false)
   const CUSTOMER_MESSAGE_LISTENER_KEY = 'client-listener'
+  const defaultData = { hero: '', ready: false }
 
   const handleClosePlayerName = () => {
     setOpenPlayerName(false)
@@ -52,11 +53,11 @@ export default () => {
 
   const joinGame = (playerID: number, playerName: string) => {
     setOpenPlayerName(false)
-    Axios.post(`${server}/games/${name}/${gameID}/join`, { playerID, playerName }).then((res) => {
+    const data = defaultData
+    Axios.post(`${server}/games/${name}/${gameID}/join`, { playerID, playerName, data }).then((res) => {
       const credentials = res.data.playerCredentials
       setCredentials(credentials)
-      setPlayerName(playerName)
-      updateCookie({ credentials, playerID, playerName })
+      updateCookie({ credentials, playerID })
 
       const uid = new Date().getTime().toString()
       var user = new CometChat.User(uid)
@@ -76,36 +77,30 @@ export default () => {
     })
   }
 
-  const updateHero = (newHero: string) => {
-    const [name, hero] = playerName.split(separator)
+  const updateHero = (newHero: HeroType) => {
+    const { hero, ready } = getPlayer()
     if (hero !== newHero) {
-      const newName = `${name}${separator}${newHero}`
-      Axios.post(`${server}/games/${name}/${gameID}/rename`, {
+      const data = { hero: newHero, ready }
+      Axios.post(`${server}/games/${name}/${gameID}/update`, {
         playerID,
         credentials,
-        newName,
+        data,
       })
         .then(() => {
-          setPlayerName(newName)
-          updateCookie({ playerName: newName })
           setTimeout(() => setHeroLoader(false), 0.45 * 1000)
         })
         .catch((e) => console.log('error', e))
     } else setHeroLoader(false)
   }
 
-  const startGame = () => {
-    const newName = `${playerName}${separator}yes`
-    Axios.post(`${server}/games/${name}/${gameID}/rename`, {
+  const startGame = (hero: HeroType) => {
+    const ready = true
+    const data = { hero, ready }
+    Axios.post(`${server}/games/${name}/${gameID}/update`, {
       playerID,
       credentials,
-      newName,
-    })
-      .then(() => {
-        setPlayerName(newName)
-        updateCookie({ playerName: newName })
-      })
-      .catch((e) => console.log('error', e))
+      data,
+    }).catch((e) => console.log('error', e))
   }
 
   const createMessageListener = () => {
@@ -136,7 +131,6 @@ export default () => {
   useEffect(() => {
     const browserCookie = Cookies.load('lobby') || {}
     if (gameID in browserCookie) {
-      setPlayerName(browserCookie[gameID].playerName)
       setCredentials(browserCookie[gameID].credentials)
       setPlayerID(browserCookie[gameID].playerID)
       const uid = browserCookie[gameID].uid?.toString()
@@ -154,14 +148,9 @@ export default () => {
     const interval = setInterval(() => {
       Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
         const players = res.data.players
-        const playersReady: boolean[] = players.map(
-          (player: any) => player.name && player.name.split(separator).length === 3
-        )
-        let ready = playersReady.length > 0 && playersReady.every((v) => v)
-
+        const ready: boolean[] = players.length > 0 && players.every((player: any) => player.data?.ready)
         setPlayers(players)
         setLoading(false)
-
         ready &&
           history.push('/start-game', {
             playerID,
@@ -208,16 +197,25 @@ export default () => {
     return footer
   }
 
+  const getPlayer = () => {
+    let result = { name: '', ...defaultData }
+    let player
+    if (playerID !== null) {
+      player = players.find((player) => player.id === playerID)
+      result.name = player.name
+      result.ready = player.data?.ready ?? false
+      result.hero = player.data?.hero ?? ''
+    }
+    return result
+  }
+
   const displayStatus = () => {
     let status
     if (playerID !== null) {
-      if (playerName.split(separator).length >= 2) {
+      const { hero, ready } = getPlayer()
+      if (hero) {
         status = (
-          <Button
-            loading={playerName.split(separator).length === 3}
-            className="start-game-button"
-            onClick={() => startGame()}
-          >
+          <Button loading={ready} className="start-game-button" onClick={() => startGame(hero as HeroType)}>
             Start Game
           </Button>
         )
@@ -227,9 +225,10 @@ export default () => {
   }
 
   const handleNewUserMessage = (newMessage: string) => {
+    const { name } = getPlayer()
     var textMessage = new CometChat.TextMessage(
       'legendofandor',
-      `${playerName.split(separator)[0]}: ${newMessage}`,
+      `${name}: ${newMessage}`,
       CometChat.RECEIVER_TYPE.GROUP
     )
     CometChat.sendMessage(textMessage)
@@ -247,14 +246,14 @@ export default () => {
           <React.Fragment>
             <div className="players">
               {players.map((player) => {
-                const [name, hero, ready] =
-                  'name' in player ? player.name.split(separator) : [undefined, undefined, undefined]
+                const { id, name, data } = player
+                const { hero, ready } = data ?? { hero: '', ready: false }
                 const characterImage = hero ? require(`../assets/images/characters/pictures/${hero}.jpg`) : character
                 return (
                   <div className="player" key={player.id}>
                     <div style={{ display: 'block', position: 'relative' }}>
                       <img className="player-image" alt="character" src={characterImage}></img>
-                      {playerID === player.id && (
+                      {playerID === id && (
                         <Button
                           loading={heroLoader}
                           className="choose-character-button"
@@ -264,7 +263,7 @@ export default () => {
                         </Button>
                       )}
                     </div>
-                    <div className="player-footer">{displayPlayerFooter(player.id, name, ready)}</div>
+                    <div className="player-footer">{displayPlayerFooter(id, name, ready)}</div>
                   </div>
                 )
               })}

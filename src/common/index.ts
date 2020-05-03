@@ -58,4 +58,3 @@ export const heroes: { [key in HeroType]: { color: heroColor, numDice: number[],
     positionOnMap: 34,
   },
 }
-export const separator = '@#@_@#@_@#@'

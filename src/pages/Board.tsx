@@ -8,7 +8,7 @@ import { css } from '@emotion/core'
 import { Icon } from 'semantic-ui-react'
 import { ClockLoader } from 'react-spinners'
 import { Fab, Action } from 'react-tiny-fab'
-import { separator, heroes, chatApiKey, heroColor } from '../common'
+import { heroes, chatApiKey, heroColor } from '../common'
 import { RiSwordLine, RiHandCoinLine } from 'react-icons/ri'
 import { IoIosWater } from 'react-icons/io'
 import DiceWindow from '../modals/DiceWindow'
@@ -25,11 +25,17 @@ import { Ctx } from 'boardgame.io'
 import { IG } from '../models/Game'
 import { TokenType, FarmerToken, UsableToken } from '../models/Token'
 
+interface GameMetadata {
+  id: number
+  name: string
+  data: { hero: HeroType; ready: boolean }
+}
+
 interface GameBoardProps {
   G: IG
   ctx: Ctx
   moves: any
-  gameMetadata: any
+  gameMetadata: GameMetadata[]
   playerID: string
   gameID: string
 }
@@ -62,7 +68,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
     const tokenTypes = ['fog', 'well', 'farmer', 'empty-well']
 
     for (let i = 0; i < props.ctx.numPlayers; i++) {
-      const heroName = props.gameMetadata[i].name.split(separator)[1] as HeroType
+      const heroName = props.gameMetadata[i].data.hero as HeroType
       this.playerCharacters[i] = require(`../assets/images/characters/pawns/${heroName}.png`)
       this.playersColor.push(heroes[heroName].color)
     }
@@ -108,9 +114,9 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
     const heroeslist = []
     let namelist = []
     for (let i = 0; i < props.ctx.numPlayers; i++) {
-      const heroName = props.gameMetadata[i].name.split(separator)[1] as HeroType
+      const heroName = props.gameMetadata[i].data.hero as HeroType
       heroeslist.push(heroName)
-      namelist.push(this.props.gameMetadata[i].name.split(separator)[0])
+      namelist.push(this.props.gameMetadata[i].name)
     }
 
     this.isActivePlayer() && this.props.moves.setupData(heroeslist, namelist)
@@ -760,7 +766,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
           add={this.props.moves.add}
           tempSplit={this.props.G.tempSplit}
           open={!this.isEmpty(this.props.G.splittableResource)}
-          names={this.props.gameMetadata.map((player: any) => player.name.split(separator)[0])}
+          names={this.props.gameMetadata.map((player: any) => player.name)}
         />
         <Widget title="In Game Chat" subtitle="" handleNewUserMessage={this.handleNewUserMessage} />
       </div>

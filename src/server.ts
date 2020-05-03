@@ -4,7 +4,7 @@ import { Server } from 'boardgame.io/server'
 import path from 'path'
 import serve from 'koa-static'
 
-const PORT = process.env.PORT || 8000
+const PORT = parseInt(process.env.PORT ?? '8000')
 const server = Server({ games: [LegendOfAndor] })
 
 const root = path.resolve(__dirname, './build')

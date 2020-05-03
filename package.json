@@ -20,7 +20,7 @@
     "@types/react-router-dom": "^5.1.5",
     "axios": "^0.19.2",
     "babel-node": "0.0.1-security",
-    "boardgame.io": "^0.39.7",
+    "boardgame.io": "^0.39.10",
     "bootstrap": "^4.4.1",
     "bufferutil": "^4.0.1",
     "cross-env": "^7.0.2",

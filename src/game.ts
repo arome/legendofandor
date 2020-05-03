@@ -22,7 +22,7 @@ const allPlayersMove = {
   drawPath: {
     move: (G: IG, ctx: Ctx, from: number, to: number) => {
       let steps: number[][] = []
-      const player = ctx.playerID
+      const player = ctx.playerID ?? 0
       const { players } = G
       const startingPosition = players[ctx.currentPlayer].positionOnMap
       const hoursPassed = players[ctx.currentPlayer].hoursPassed
@@ -77,7 +77,7 @@ const allPlayersMove = {
   },
   setHoveredArea: {
     move: (G: IG, ctx: Ctx, area: any) => {
-      G.players[ctx.playerID].hoveredArea = area
+      G.players[ctx.playerID ?? 0].hoveredArea = area
     },
     redact: true,
   },
@@ -85,7 +85,7 @@ const allPlayersMove = {
     let tokens = G.tokens
     let well = tokens.splice(wellTokenIndex, 1)[0] as UsableToken
     well.used = true
-    G.players[ctx.playerID].willpower += willpower
+    G.players[ctx.playerID ?? 0].willpower += willpower
     tokens.push(well)
     G.tokens = tokens
   },
@@ -93,16 +93,16 @@ const allPlayersMove = {
     const farmer = G.tokens[farmerTokenIndex] as FarmerToken;
     farmer.picked = true;
     G.tokens[farmerTokenIndex] = farmer;
-    G.players[ctx.playerID].pickedFarmer.push(farmer.startingPos)
+    G.players[ctx.playerID ?? 0].pickedFarmer.push(farmer.startingPos)
   },
   dropFarmer(G: IG, ctx: Ctx, farmerTokenIndex: number) {
     let tokens = G.tokens
     let farmer = tokens.splice(farmerTokenIndex, 1)[0] as FarmerToken
     farmer.picked = false
-    let currentPickedFarmer = G.players[ctx.playerID].pickedFarmer
+    let currentPickedFarmer = G.players[ctx.playerID ?? 0].pickedFarmer
     currentPickedFarmer.splice(currentPickedFarmer.indexOf(farmer.startingPos), 1)
-    G.players[ctx.playerID].pickedFarmer = currentPickedFarmer
-    if (G.players[ctx.playerID].positionOnMap === 0) {
+    G.players[ctx.playerID ?? 0].pickedFarmer = currentPickedFarmer
+    if (G.players[ctx.playerID ?? 0].positionOnMap === 0) {
       G.castleDefense += 1
     } else {
       tokens.push(farmer)
@@ -283,9 +283,9 @@ const LegendOfAndor = {
       ctx.events?.endTurn()
     },
     skipTurn(G: IG, ctx: Ctx) {
-      if (G.players[ctx.playerID].hoursPassed === 10) {
-        G.players[ctx.playerID].endDay = true
-      } else G.players[ctx.playerID].hoursPassed += 1
+      if (G.players[ctx.playerID ?? 0].hoursPassed === 10) {
+        G.players[ctx.playerID ?? 0].endDay = true
+      } else G.players[ctx.playerID ?? 0].hoursPassed += 1
       // @ts-ignore
       ctx.events?.endTurn()
     },
