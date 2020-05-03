@@ -21,7 +21,29 @@ export const DICE_TYPES = {
 
 const DEFAULT_DICE_SIZE = 4
 
-class Dices3d extends Component {
+interface Dice {
+  type: string
+  backColor: string
+  fontColor: string
+  value: number
+}
+interface Dices3dProps {
+  dices: Dice[]
+  className?: any
+  width?: any
+  height?: any
+  style?: any
+}
+
+class Dices3d extends Component<Dices3dProps> {
+  scene: any
+  mount: any
+  camera: any
+  renderer: any
+  controls: any
+  world: any
+  diceModels: any[] = []
+  frameId: any
   componentDidMount() {
     if (!Array.isArray(this.props.dices)) {
       throw new Error(
@@ -92,7 +114,7 @@ class Dices3d extends Component {
 
     // Dice
     this.diceModels = this.generateDiceModels(this.props.dices)
-    this.diceModels.forEach((dice) => this.scene.add(dice.getObject()))
+    this.diceModels.forEach((dice: any) => this.scene.add(dice.getObject()))
 
     this.prepareDicesValues(this.props.dices.map((dice) => dice.value))
     this.start()
@@ -103,8 +125,8 @@ class Dices3d extends Component {
     this.mount.removeChild(this.renderer.domElement)
   }
 
-  generateDiceModels = (dices) => {
-    return dices.map((dice) => {
+  generateDiceModels = (dices: any[]) => {
+    return dices.map((dice: any) => {
       const { type, size } = dice
       const diceSize = size || DEFAULT_DICE_SIZE
       if (type === DICE_TYPES.D4) {
@@ -129,7 +151,7 @@ class Dices3d extends Component {
     })
   }
 
-  prepareDicesValues = (values) => {
+  prepareDicesValues = (values: any) => {
     const diceValues = this.diceModels.map((diceModel, index) => {
       const { size } = diceModel
       const diceObject = diceModel.getObject()

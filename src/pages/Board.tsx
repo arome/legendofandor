@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import ImageMapper from 'react-image-mapper'
+import ImageMapper, { Area } from 'react-image-mapper'
 import gameBoard from '../assets/images/Andor_Board.jpg'
 import './Board.scss'
 import tiles from './tiles'
@@ -8,10 +8,10 @@ import { css } from '@emotion/core'
 import { Icon } from 'semantic-ui-react'
 import { ClockLoader } from 'react-spinners'
 import { Fab, Action } from 'react-tiny-fab'
-import { separator, heroes, chatApiKey } from '../common'
+import { separator, heroes, chatApiKey, heroColor } from '../common'
 import { RiSwordLine, RiHandCoinLine } from 'react-icons/ri'
 import { IoIosWater } from 'react-icons/io'
-import DicesWindow from '../modals/DiceWindow'
+import DiceWindow from '../modals/DiceWindow'
 import ResourceSplit from '../modals/ResourceSplit'
 import { BsSkipForwardFill } from 'react-icons/bs'
 import 'react-tiny-fab/dist/styles.css'
@@ -20,38 +20,61 @@ import { GiFarmer } from 'react-icons/gi'
 import { Widget, addResponseMessage, addUserMessage } from 'react-chat-widget'
 import Cookies from 'react-cookies'
 import { CometChat } from '@cometchat-pro/chat'
+import { HeroType } from '../models/Character'
+import { Ctx } from 'boardgame.io'
+import { IG } from '../models/Game'
+import { TokenType, FarmerToken, UsableToken } from '../models/Token'
 
-export default class GameBoard extends Component {
-  MAP
-  areas
-  originalImgHeight = 6476
-  originalImgWidth = 9861
-  constructor(props) {
+interface GameBoardProps {
+  G: IG
+  ctx: Ctx
+  moves: any
+  gameMetadata: any
+  playerID: string
+  gameID: string
+}
+
+interface GameBoardState {
+  windowWidth: number
+  windowHeight: number
+  loadingImage: boolean
+  openDice: boolean
+  uid?: string
+}
+export default class GameBoard extends Component<GameBoardProps, GameBoardState> {
+  MAP: any
+  areas: any
+  playerCharacters: any
+  monsterCharacters: any
+  tokens: any
+  playersColor: heroColor[]
+  playersToken: string[]
+  originalImgHeight: number = 6476
+  originalImgWidth: number = 9861
+
+  constructor(props: GameBoardProps) {
     super(props)
-    const heroeslist = []
-    let namelist = []
     this.playerCharacters = {}
     this.monsterCharacters = {}
     this.tokens = {}
     this.playersColor = []
+    const monsterTypes = ['Gor', 'Skrall']
+    const tokenTypes = ['fog', 'well', 'farmer', 'empty-well']
+
     for (let i = 0; i < props.ctx.numPlayers; i++) {
-      const heroName = this.props.gameMetadata[i].name.split(separator)[1]
-      heroeslist.push(heroName)
-      namelist.push(this.props.gameMetadata[i].name.split(separator)[0])
+      const heroName = props.gameMetadata[i].name.split(separator)[1] as HeroType
       this.playerCharacters[i] = require(`../assets/images/characters/pawns/${heroName}.png`)
       this.playersColor.push(heroes[heroName].color)
     }
-    const monsterTypes = ['Gor', 'Skrall']
-    const tokenTypes = ['fog', 'well', 'farmer', 'empty-well']
 
     monsterTypes.forEach(
       (monsterType) =>
         (this.monsterCharacters[monsterType] = require(`../assets/images/characters/pawns/monsters/${monsterType}.png`))
     )
     tokenTypes.forEach((tokenType) => (this.tokens[tokenType] = require(`../assets/images/tokens/${tokenType}.png`)))
-    this.playersToken = {}
+    this.playersToken = []
     this.playersColor.map(
-      (color, index) => (this.playersToken[index] = require(`../assets/images/tokens/${color}.png`))
+      (color, index: number) => (this.playersToken[index] = require(`../assets/images/tokens/${color}.png`))
     )
     this.MAP = {
       name: 'my-map',
@@ -71,7 +94,6 @@ export default class GameBoard extends Component {
       }
     }
 
-    this.loadingImage = true
     this.state = {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
@@ -79,7 +101,19 @@ export default class GameBoard extends Component {
       openDice: false,
     }
 
-    !this.props.G.init && this.isActivePlayer() && this.props.moves.setupData(heroeslist, namelist)
+    !this.props.G.init && this.init(props)
+  }
+
+  init = (props: GameBoardProps) => {
+    const heroeslist = []
+    let namelist = []
+    for (let i = 0; i < props.ctx.numPlayers; i++) {
+      const heroName = props.gameMetadata[i].name.split(separator)[1] as HeroType
+      heroeslist.push(heroName)
+      namelist.push(this.props.gameMetadata[i].name.split(separator)[0])
+    }
+
+    this.isActivePlayer() && this.props.moves.setupData(heroeslist, namelist)
   }
 
   handleResize = () =>
@@ -88,14 +122,17 @@ export default class GameBoard extends Component {
       windowHeight: window.innerHeight,
     })
 
-  arrayEquals = (array1, array2) => {
+  arrayEquals = (array1: any[], array2: any[]) => {
     if (!array1 || !array2) return false
     if (array1.length !== array2.length) return false
     return array1.every((val, index) => val === array2[index])
   }
-  componentDidUpdate(prevProps) {
-    if (this.props.G.rollingDices && !this.arrayEquals(prevProps.G.rollingDices, this.props.G.rollingDices)) {
-      this.setState({ openDice: true })
+  componentDidUpdate(prevProps: GameBoardProps) {
+    if (this.props.G.init) {
+      if (this.props.G.rollingDices.length > 0 && this.props.G.fight.turn !== prevProps.G.fight.turn) {
+        this.setState({ openDice: true })
+      }
+      if (this.props.G.status && this.props.G.status !== prevProps.G.status) this.displayStatusMessage()
     }
   }
 
@@ -112,21 +149,20 @@ export default class GameBoard extends Component {
         })
       }
     }
-    this.playerName = this.props.gameMetadata[this.props.playerID].name.split(separator)[0]
   }
 
   createMessageListener = () => {
     CometChat.addMessageListener(
       'client-listener',
       new CometChat.MessageListener({
-        onTextMessageReceived: (message) => {
+        onTextMessageReceived: (message: any) => {
           addResponseMessage(message.text)
         },
       })
     )
   }
 
-  fetchPreviousMessages = (uid) => {
+  fetchPreviousMessages = (uid: string) => {
     var messagesRequest = new CometChat.ConversationsRequestBuilder().setLimit(50).setConversationType('group').build()
     messagesRequest.fetchNext().then((conversationList) => {
       const message = conversationList[0].getLastMessage()
@@ -144,7 +180,7 @@ export default class GameBoard extends Component {
     window.removeEventListener('resize', this.handleResize)
   }
 
-  enterArea(area) {
+  enterArea(area: Area) {
     this.props.moves.setHoveredArea(area)
   }
 
@@ -152,9 +188,9 @@ export default class GameBoard extends Component {
   getTurnPlayer = () => this.props.G.players[this.props.ctx.currentPlayer]
   getMyPlayer = () => this.props.G.players[this.props.playerID]
 
-  clicked(area) {
-    const to = parseInt(area.name)
-    const myPath = this.props.G.players[this.props.playerID].path
+  clicked(area: Area) {
+    const to = parseInt(area.name ?? '0')
+    const myPath = this.getMyPlayer().path
     const lastSelected = myPath.length > 0 ? myPath[myPath.length - 1][1] : null
     lastSelected === to
       ? this.isActivePlayer() &&
@@ -171,7 +207,7 @@ export default class GameBoard extends Component {
         }).then((result) => {
           'value' in result
             ? this.props.moves.move(to)
-            : result.dismiss === 'cancel' &&
+            : result.dismiss === Swal.DismissReason.cancel &&
               this.props.moves.drawPath(lastSelected, this.props.G.players[this.props.playerID].positionOnMap)
         })
       : this.props.moves.drawPath(lastSelected, to)
@@ -181,14 +217,14 @@ export default class GameBoard extends Component {
     this.props.moves.setHoveredArea(null)
   }
 
-  getTipPosition(area) {
-    return { top: `${area.center[1]}px`, left: `${area.center[0]}px` }
+  getTipPosition(area: Area) {
+    return { top: `${area.center ? area.center[1] : 0}px`, left: `${area.center ? area.center[0] : 0}px` }
   }
 
-  getPlayerPosition(position, id) {
+  getPlayerPosition(position: number, id: any) {
     const center = this.computeCenter(this.MAP.areas[position])
     const monstersInArea = this.props.G.monsters.filter((monster) => monster.positionOnMap === position)
-    const heroesInArea = Object.keys(this.props.G.players).filter(
+    const heroesInArea: any[] = Object.keys(this.props.G.players).filter(
       (playerID) => this.props.G.players[playerID].positionOnMap === position
     )
     const charactersInArea = heroesInArea.concat(monstersInArea)
@@ -222,7 +258,7 @@ export default class GameBoard extends Component {
     }
   }
 
-  getTokenPosition(area) {
+  getTokenPosition(area: Area) {
     const center = this.computeCenter(area)
     return {
       top: `${center[1]}px`,
@@ -230,7 +266,7 @@ export default class GameBoard extends Component {
     }
   }
 
-  getTokenSize = (type) => {
+  getTokenSize = (type?: TokenType) => {
     const scale = (2 * this.state.windowWidth) / this.originalImgWidth
     let width = 1
     let height = 1
@@ -264,13 +300,15 @@ export default class GameBoard extends Component {
     }
   }
 
-  computeCenter(area) {
+  computeCenter(area: Area) {
     if (!area) return [0, 0]
-    const scaledCoords = area.coords.map((coord, index) =>
-      index % 2 === 1
-        ? (coord * this.state.windowHeight) / this.originalImgHeight
-        : (coord * this.state.windowWidth) / this.originalImgWidth
-    )
+    const scaledCoords = area.coords
+      ? area.coords.map((coord, index) =>
+          index % 2 === 1
+            ? (coord * this.state.windowHeight) / this.originalImgHeight
+            : (coord * this.state.windowWidth) / this.originalImgWidth
+        )
+      : []
     // Calculate centroid
     if (scaledCoords.length === 3) {
       const [x, y] = scaledCoords
@@ -297,8 +335,8 @@ export default class GameBoard extends Component {
           steps: this.props.G.players[i].path,
         })
     paths.push({
-      circle: { color: this.playersColor[this.props.playerID], radius: 10 },
-      line: { color: this.playersColor[this.props.playerID] },
+      circle: { color: this.playersColor[parseInt(this.props.playerID)], radius: 10 },
+      line: { color: this.playersColor[parseInt(this.props.playerID)] },
       steps: this.props.G.players[this.props.playerID].path,
     })
     return paths
@@ -316,18 +354,19 @@ export default class GameBoard extends Component {
     myHoveredArea &&
       hoveredAreas.push({
         ...myHoveredArea,
-        strokeColor: this.playersColor[this.props.playerID],
+        strokeColor: this.playersColor[parseInt(this.props.playerID)],
         _id: this.props.playerID,
       })
     return hoveredAreas
   }
 
   canPickFarmer = () => {
-    const farmers = this.props.G.tokens
-      .filter((token) => token.type === 'farmer' && token.positionOnMap === this.getMyPlayer().positionOnMap)
-      .map((farmer) => farmer.startingPos)
+    const farmersToken = this.props.G.tokens.filter(
+      (token) => token.type === 'farmer' && token.positionOnMap === this.getMyPlayer().positionOnMap
+    ) as FarmerToken[]
+    const farmers = farmersToken.map((farmer) => farmer.startingPos)
     if (farmers.length > 0) {
-      farmers.some((farmerPosition) => {
+      return farmers.some((farmerPosition) => {
         for (let i = 0; i < this.props.ctx.numPlayers; i++)
           if (this.props.G.players[i].pickedFarmer.includes(farmerPosition)) return false
         return true
@@ -345,15 +384,16 @@ export default class GameBoard extends Component {
     const farmerTokenIndex = this.props.G.tokens.findIndex(
       (token) => token.type === 'farmer' && token.positionOnMap === this.getMyPlayer().positionOnMap
     )
-    const startPos = this.props.G.tokens[farmerTokenIndex].startingPos
-    if (!this.props.G.tokens[farmerTokenIndex].picked) {
+    const farmer = this.props.G.tokens[farmerTokenIndex] as FarmerToken
+    const startPos = farmer.startingPos
+    if (!farmer.picked) {
       Swal.fire({
         icon: 'success',
         title: 'Farmer picked!',
         text: `Bring him to the castle to increase the castle defense.`,
       })
       this.props.moves.pickFarmer(farmerTokenIndex)
-    } else if (this.props.G.tokens[farmerTokenIndex].picked && this.getMyPlayer().pickedFarmer.includes(startPos)) {
+    } else if (farmer.picked && this.getMyPlayer().pickedFarmer.includes(startPos)) {
       let text = ''
       if (this.getMyPlayer().positionOnMap === 0) {
         text = `You brought the farmer to the castle! The castle defense has increased to ${
@@ -376,7 +416,8 @@ export default class GameBoard extends Component {
     const wellTokenIndex = tokens.findIndex(
       (token) => token.type === 'well' && token.positionOnMap === this.getMyPlayer().positionOnMap
     )
-    return wellTokenIndex > -1 && !tokens[wellTokenIndex].used
+    const well = tokens[wellTokenIndex] as UsableToken
+    return wellTokenIndex > -1 && !well.used
   }
 
   drink = () => {
@@ -408,7 +449,7 @@ export default class GameBoard extends Component {
     return false
   }
 
-  fight = async () => {
+  fight = () => {
     const position = this.getTurnPlayer().positionOnMap
     const monsters = this.props.G.monsters.filter(
       (monster) =>
@@ -416,28 +457,28 @@ export default class GameBoard extends Component {
         (this.getTurnPlayer().specialAbilities.proxyAttack && tiles.neighbors[position].includes(monster.positionOnMap))
     )
     if (monsters.length > 1) {
-      let inputOptions = {}
-      monsters.forEach((monster) => (inputOptions[monster.type] = monster.positionOnMap))
-      const { type: positionMonster } = await Swal.fire({
+      let inputOptions: { [inputValue: string]: string } = {}
+      monsters.forEach(
+        (monster) => (inputOptions[monster.positionOnMap.toString()] = `${monster.positionOnMap}: ${monster.type}`)
+      )
+      Swal.fire({
         title: 'Which monster to attack',
         input: 'select',
         inputOptions,
         inputPlaceholder: 'Select a monster',
         showCancelButton: true,
+      }).then((res) => {
+        this.props.moves.startFight(parseInt(res.value))
       })
-      this.props.moves.startFight(positionMonster)
     } else {
       this.props.moves.startFight(monsters[0].positionOnMap)
     }
   }
 
   finishRoll = () => {
-    if (this.props.G.rollingDices) {
-      if (this.props.G.fight.turn === 'player') {
-        this.isActivePlayer() && this.props.moves.monsterAttack()
-      } else {
-        this.isActivePlayer() && this.props.moves.endFight()
-      }
+    if (this.isActivePlayer() && this.props.G.rollingDices.length > 0) {
+      if (this.props.G.fight.turn === 'player') this.props.moves.monsterAttack()
+      else this.props.moves.endFight()
     }
   }
 
@@ -486,7 +527,7 @@ export default class GameBoard extends Component {
         <img
           key={playerID}
           alt="player token"
-          src={this.playersToken[playerID]}
+          src={this.playersToken[parseInt(playerID)]}
           className="character"
           style={{
             ...this.getTokenPosition({ coords: tiles.hours[Math.min(hoursPassed, 10)] }),
@@ -501,12 +542,13 @@ export default class GameBoard extends Component {
     const tokens = this.props.G.tokens
     return tokens.map((token, key) => {
       let coords = this.MAP.areas[token.positionOnMap].coords
+      let tokenType: TokenType | 'empty-well' = token.type
       if (token.type === 'fog') {
         coords = tiles.fogAreas[token.positionOnMap]
       } else if (token.type === 'well') {
         coords = tiles.wellAreas[token.positionOnMap]
+        if ((token as UsableToken).used) tokenType = 'empty-well'
       }
-      const tokenType = token.type === 'well' ? (token.used ? 'empty-well' : 'well') : token.type
       return (
         <img
           key={key}
@@ -522,7 +564,7 @@ export default class GameBoard extends Component {
     })
   }
 
-  handleNewUserMessage = (newMessage) => {
+  handleNewUserMessage = (newMessage: string) => {
     var textMessage = new CometChat.TextMessage(
       'legendofandor',
       `${this.getMyPlayer().name}: ${newMessage}`,
@@ -588,7 +630,7 @@ export default class GameBoard extends Component {
     }
   }
 
-  isEmpty(obj) {
+  isEmpty(obj: any) {
     for (var key in obj) {
       if (obj.hasOwnProperty(key)) return false
     }
@@ -606,105 +648,109 @@ export default class GameBoard extends Component {
     `
     return (
       <div className="board">
-        <React.Fragment>
-          <ClockLoader css={override} size={100} color={'white'} loading={this.state.loadingImage} />
-          <ImageMapper
-            src={gameBoard}
-            map={this.MAP}
-            width={this.state.windowWidth}
-            imgWidth={this.originalImgWidth}
-            height={this.state.windowHeight}
-            imgHeight={this.originalImgHeight}
-            onLoad={() => this.state.loadingImage && this.setState({ loadingImage: false })}
-            onClick={(area) => this.clicked(area)}
-            onMouseEnter={(area) => this.enterArea(area)}
-            onMouseLeave={() => this.leaveArea()}
-            strokeColor={this.playersColor[this.props.playerID]}
-            lineWidth={5}
-            hoveredAreas={this.getHoveredAreas()}
-            paths={this.getPaths()}
-          />
-          {this.state.hoveredArea && (
-            <span className="tooltip" style={{ ...this.getTipPosition(this.state.hoveredArea) }}>
-              {this.state.hoveredArea?.name}
-            </span>
-          )}
-          {this.renderTokens()}
-          {this.renderPlayers()}
-          {this.renderMonsters()}
-          {this.renderHoursToken()}
-          <img
-            alt="narrator token"
-            src={narratorToken}
-            className="character"
-            style={{
-              ...this.getTokenPosition({ coords: tiles.narratorAreas[this.props.G.letter] }),
-              ...this.getTokenSize(),
-            }}
-          />
-          <Fab
-            mainButtonStyles={{ backgroundColor: this.playersColor[this.props.ctx.currentPlayer] }}
-            position={{ bottom: 50, right: 50 }}
-            icon={<Icon name="add" />}
-            alwaysShowTitle={true}
-          >
-            <Action
-              text="Drink"
-              onClick={() => this.canDrink() && this.drink()}
-              style={this.canDrink() ? { backgroundColor: this.playersColor[this.props.playerID] } : {}}
+        {this.props.G.init && (
+          <React.Fragment>
+            <ClockLoader css={override} size={100} color={'white'} loading={this.state.loadingImage} />
+            <ImageMapper
+              src={gameBoard}
+              map={this.MAP}
+              width={this.state.windowWidth}
+              imgWidth={this.originalImgWidth}
+              height={this.state.windowHeight}
+              imgHeight={this.originalImgHeight}
+              onLoad={() => this.state.loadingImage && this.setState({ loadingImage: false })}
+              onClick={(area: Area) => this.clicked(area)}
+              onMouseEnter={(area: Area) => this.enterArea(area)}
+              onMouseLeave={() => this.leaveArea()}
+              strokeColor={this.playersColor[parseInt(this.props.playerID)]}
+              lineWidth={5}
+              hoveredAreas={this.getHoveredAreas()}
+              paths={this.getPaths()}
+            />
+            {this.getMyPlayer().hoveredArea && (
+              <span className="tooltip" style={{ ...this.getTipPosition(this.getMyPlayer().hoveredArea) }}>
+                {this.getMyPlayer().hoveredArea?.name}
+              </span>
+            )}
+
+            {[this.renderTokens(), this.renderPlayers(), this.renderMonsters(), this.renderHoursToken()]}
+            <img
+              alt="narrator token"
+              src={narratorToken}
+              className="character"
+              style={{
+                ...this.getTokenPosition({ coords: tiles.narratorAreas[this.props.G.letter] }),
+                ...this.getTokenSize(),
+              }}
+            />
+            <Fab
+              mainButtonStyles={{ backgroundColor: this.playersColor[parseInt(this.props.ctx.currentPlayer)] }}
+              position={{ bottom: 50, right: 50 }}
+              icon={<Icon name="add" />}
+              alwaysShowTitle={true}
             >
-              <IoIosWater />
-            </Action>
-            <Action
-              text="Collect"
-              onClick={() => false && console.log('collecting coins')}
-              style={false ? { backgroundColor: this.playersColor[this.props.playerID] } : {}}
-            >
-              <RiHandCoinLine />
-            </Action>
-            <Action
-              text="Drop/Pick Farmer"
-              onClick={() => (this.canPickFarmer() || this.canDropFarmer()) && this.pickDropFarmer()}
-              style={
-                this.canPickFarmer() || this.canDropFarmer()
-                  ? { backgroundColor: this.playersColor[this.props.playerID] }
-                  : {}
-              }
-            >
-              <GiFarmer />
-            </Action>
-            <Action
-              text="Fight"
-              onClick={() => this.isActivePlayer() && this.canFight() && this.fight()}
-              style={
-                this.isActivePlayer() && this.canFight()
-                  ? { backgroundColor: this.playersColor[this.props.playerID] }
-                  : {}
-              }
-            >
-              <RiSwordLine />
-            </Action>
-            <Action
-              text="Skip Turn"
-              onClick={() => this.isActivePlayer() && this.props.moves.skipTurn()}
-              style={this.isActivePlayer() ? { backgroundColor: this.playersColor[this.props.playerID] } : {}}
-            >
-              <BsSkipForwardFill />
-            </Action>
-            <Action
-              text="End Day"
-              onClick={() => this.isActivePlayer() && this.props.moves.endDay()}
-              style={this.isActivePlayer() ? { backgroundColor: this.playersColor[this.props.playerID] } : {}}
-            >
-              <Icon name="bed" />
-            </Action>
-          </Fab>
-        </React.Fragment>
-        <DicesWindow
+              <Action
+                text="Drink"
+                onClick={() => this.canDrink() && this.drink()}
+                style={this.canDrink() ? { backgroundColor: this.playersColor[parseInt(this.props.playerID)] } : {}}
+              >
+                <IoIosWater />
+              </Action>
+              <Action
+                text="Collect"
+                onClick={() => false && console.log('collecting coins')}
+                style={false ? { backgroundColor: this.playersColor[parseInt(this.props.playerID)] } : {}}
+              >
+                <RiHandCoinLine />
+              </Action>
+              <Action
+                text="Drop/Pick Farmer"
+                onClick={() => (this.canPickFarmer() || this.canDropFarmer()) && this.pickDropFarmer()}
+                style={
+                  this.canPickFarmer() || this.canDropFarmer()
+                    ? { backgroundColor: this.playersColor[parseInt(this.props.playerID)] }
+                    : {}
+                }
+              >
+                <GiFarmer />
+              </Action>
+              <Action
+                text="Fight"
+                onClick={() => this.isActivePlayer() && this.canFight() && this.fight()}
+                style={
+                  this.isActivePlayer() && this.canFight()
+                    ? { backgroundColor: this.playersColor[parseInt(this.props.playerID)] }
+                    : {}
+                }
+              >
+                <RiSwordLine />
+              </Action>
+              <Action
+                text="Skip Turn"
+                onClick={() => this.isActivePlayer() && this.props.moves.skipTurn()}
+                style={
+                  this.isActivePlayer() ? { backgroundColor: this.playersColor[parseInt(this.props.playerID)] } : {}
+                }
+              >
+                <BsSkipForwardFill />
+              </Action>
+              <Action
+                text="End Day"
+                onClick={() => this.isActivePlayer() && this.props.moves.endDay()}
+                style={
+                  this.isActivePlayer() ? { backgroundColor: this.playersColor[parseInt(this.props.playerID)] } : {}
+                }
+              >
+                <Icon name="bed" />
+              </Action>
+            </Fab>
+          </React.Fragment>
+        )}
+        <DiceWindow
           open={this.state.openDice}
           fight={this.props.G.fight}
           handleClose={() => this.setState({ openDice: false })}
-          color={this.playersColor[this.props.ctx.currentPlayer]}
+          color={this.playersColor[parseInt(this.props.ctx.currentPlayer)]}
           rollingDices={this.props.G.rollingDices}
           onFinishRoll={() => this.finishRoll()}
         />
@@ -714,10 +760,9 @@ export default class GameBoard extends Component {
           add={this.props.moves.add}
           tempSplit={this.props.G.tempSplit}
           open={!this.isEmpty(this.props.G.splittableResource)}
-          names={this.props.gameMetadata.map((player) => player.name.split(separator)[0])}
+          names={this.props.gameMetadata.map((player: any) => player.name.split(separator)[0])}
         />
         <Widget title="In Game Chat" subtitle="" handleNewUserMessage={this.handleNewUserMessage} />
-        {this.displayStatusMessage()}
       </div>
     )
   }

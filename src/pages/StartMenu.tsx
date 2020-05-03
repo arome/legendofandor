@@ -1,10 +1,9 @@
 import React, { useState } from 'react'
 import logo from '../assets/images/LOA_icon_small.png'
-import { AwesomeButton } from 'react-awesome-button'
-import styles from 'react-awesome-button/src/styles/themes/theme-blue'
 import './StartMenu.scss'
 import CreateGameModal from '../modals/CreateGameModal'
 import JoinGameModal from '../modals/JoinGameModal'
+import { Button } from 'semantic-ui-react'
 
 function StartMenu() {
   const [openCreate, setOpenCreate] = useState(false)
@@ -26,12 +25,12 @@ function StartMenu() {
           Legend of Andor
         </h1>
         <div className="buttons">
-          <AwesomeButton onPress={handleShowCreate} className="button-start" cssmodule={styles} type="primary">
+          <Button onClick={handleShowCreate} className="button-start">
             Create Game
-          </AwesomeButton>
-          <AwesomeButton onPress={handleShowJoin} cssmodule={styles} type="primary">
+          </Button>
+          <Button onClick={handleShowJoin} className="button-join">
             Join Game
-          </AwesomeButton>
+          </Button>
         </div>
       </header>
       <CreateGameModal open={openCreate} handleClose={handleCloseCreate} />

@@ -10,11 +10,17 @@
     width: 15%;
     justify-content: space-evenly;
     flex-direction: column;
-  }
+    .button-start {
+      width: 100%;
+      margin-bottom: 20px;
+      background-color: #323707;
+      color: white;
+    }
 
-  .button-start {
-    width: 100%;
-    margin-bottom: 20px;
+    .button-join {
+      background: #c2821c;
+      color: white;
+    }
   }
 
   .App-header {
@@ -31,10 +37,6 @@
       font-size: 6vh;
       font-weight: 500;
     }
-  }
-
-  .App-link {
-    color: #61dafb;
   }
 
   @keyframes App-logo-spin {

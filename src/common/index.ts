@@ -1,10 +1,14 @@
+import { HeroType, SpecialAbility } from "../models/Character"
+
 const hostname = typeof window !== 'undefined' && window.location.hostname
 const PORT = process.env.PORT || 8000
 export const chatApiKey = '413f2ac736e535cb958bc3bebf4442d2ed7c83fe'
 export const appId = '180435fc778afec'
 export const server = hostname === 'localhost' ? `http://${hostname}:${PORT}` : `https://${hostname}`
 export const name = 'legend-of-andor'
-export const heroes = {
+
+export type heroColor = 'green' | 'yellow' | 'purple' | 'blue';
+export const heroes: { [key in HeroType]: { color: heroColor, numDice: number[], specialAbility: SpecialAbility, positionOnMap: number } } = {
   Archer_female: {
     color: 'green',
     numDice: [3, 4, 5],

@@ -12,6 +12,12 @@
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
+    "@types/jest": "^25.2.1",
+    "@types/node": "^13.13.4",
+    "@types/react": "^16.9.34",
+    "@types/react-cookies": "^0.1.0",
+    "@types/react-dom": "^16.9.7",
+    "@types/react-router-dom": "^5.1.5",
     "axios": "^0.19.2",
     "babel-node": "0.0.1-security",
     "boardgame.io": "^0.39.7",
@@ -25,12 +31,10 @@
     "koa-mount": "^4.0.0",
     "koa-static": "^5.0.0",
     "node-sass": "^4.13.1",
-    "nodemon": "^2.0.3",
     "orbit-controls-es6": "^2.0.1",
     "path": "^0.12.7",
     "popper.js": "^1.16.1",
     "react": "^16.13.1",
-    "react-awesome-button": "^6.5.1",
     "react-bootstrap": "^1.0.0",
     "react-chat-widget": "^3.0.0",
     "react-cookies": "^0.1.1",
@@ -47,7 +51,9 @@
     "semantic-ui-react": "^0.88.2",
     "socket.io-client": "^2.3.0",
     "sweetalert2": "^9.10.11",
+    "three": "^0.108.0",
     "threejs-dice": "^1.1.0",
+    "typed-scss-modules": "^1.3.0",
     "typescript": "^3.8.3",
     "utf-8-validate": "^5.0.2"
   },
@@ -55,7 +61,7 @@
     "start": "npm run dev",
     "dev": "npx concurrently npm:dev:server npm:dev:client",
     "dev:client": "cross-env NODE_ENV=development react-scripts start",
-    "dev:server": "node -r esm server.js",
+    "dev:server": "nodemon",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -74,5 +80,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/koa-static": "^4.0.1",
+    "nodemon": "^2.0.3",
+    "ts-node": "^8.10.1"
   }
 }

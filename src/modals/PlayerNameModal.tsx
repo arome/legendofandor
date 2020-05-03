@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { Form, Modal } from 'semantic-ui-react'
+import { PlayerNameModalProps } from '../models/Modal'
 
-export default (props) => {
+export default (props: PlayerNameModalProps) => {
   const [playerName, setPlayerName] = useState('')
   const [error, setError] = useState(false)
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: any) => {
     event.preventDefault()
     const error = !(playerName && playerName.length > 0)
     setError(error)

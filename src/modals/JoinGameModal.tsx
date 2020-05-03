@@ -4,13 +4,14 @@ import { Form, Modal } from 'semantic-ui-react'
 import Axios from 'axios'
 import { server, name } from '../common'
 import Swal from 'sweetalert2'
+import { JoinGameModalProps } from '../models/Modal'
 
-const CreateGameModal = (props) => {
+const JoinGameModal = (props: JoinGameModalProps) => {
   const [id, setId] = useState('')
   const [error, setError] = useState(false)
   const history = useHistory()
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: any) => {
     event.preventDefault()
     const error = !(id && id.length > 0)
     setError(error)
@@ -48,4 +49,4 @@ const CreateGameModal = (props) => {
   )
 }
 
-export default CreateGameModal
+export default JoinGameModal

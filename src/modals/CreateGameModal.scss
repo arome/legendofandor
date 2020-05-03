@@ -1,10 +1,7 @@
 .create-game-modal {
-  .modal-buttons {
-    display: flex;
-    justify-content: flex-end;
-
-    button {
-      margin-left: 1vw;
-    }
+  .ui.button {
+    margin-left: 1vw;
+    background-color: #323707;
+    color: white;
   }
 }

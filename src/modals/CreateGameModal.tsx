@@ -5,13 +5,15 @@ import './CreateGameModal.scss'
 import axios from 'axios'
 import LOA from '../game'
 import { server } from '../common'
-const CreateGameModal = (props) => {
+import { CreateGameModalProps } from '../models/Modal'
+
+const CreateGameModal = (props: CreateGameModalProps) => {
   const [loading, setLoading] = useState(false)
   const [difficulty, setDifficulty] = useState('easy')
   const [numPlayers, setNumPlayers] = useState(2)
   const history = useHistory()
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: any) => {
     setLoading(true)
     event.preventDefault()
     const setupData = { difficulty }
@@ -32,7 +34,7 @@ const CreateGameModal = (props) => {
         <Form onSubmit={handleSubmit}>
           <Form.Select
             defaultValue={numPlayers}
-            onChange={(d, e) => setNumPlayers(e.value)}
+            onChange={(d, e: any) => setNumPlayers(e.value)}
             fluid
             label="# of Players"
             options={[
@@ -58,7 +60,7 @@ const CreateGameModal = (props) => {
             />
           </Form.Group>
           <Form.Group>
-            <Form.Button loading={loading}>Create Game</Form.Button>
+            <Form.Button loading={loading} className="button">Create Game</Form.Button>
           </Form.Group>
         </Form>
       </Modal.Content>

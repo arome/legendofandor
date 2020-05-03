@@ -8,10 +8,16 @@ import { useLocation } from 'react-router-dom'
 
 // import logger from 'redux-logger'
 // import { applyMiddleware } from 'redux'
+interface LocationState {
+  playerID: number
+  credentials: any
+  gameID: string
+  numPlayers: number
+}
 
 export default () => {
   const location = useLocation()
-  const { playerID, credentials, gameID, numPlayers } = location.state
+  const { playerID, credentials, gameID, numPlayers } = location.state as LocationState
 
   const App = Client({
     game,

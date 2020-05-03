@@ -3,16 +3,20 @@ import React, { Component } from 'react'
 import { Modal } from 'semantic-ui-react'
 import Dices3d, { DICE_TYPES } from '../libs/react-dice-3d'
 import './DiceWindow.scss'
+import { heroColor } from '../common'
 
-class DicesWindow extends Component {
-  state = {
-    open: false,
-  }
+interface DiceWindowProps {
+  rollingDices: number[]
+  handleClose: any
+  onFinishRoll: any
+  open: boolean
+  fight: any
+  color: heroColor
+}
 
-  componentDidUpdate(prevProps) {
-    const { rollingDices } = this.props
-    if (rollingDices && rollingDices !== prevProps.rollingDices) {
-      this.setState({ open: true })
+class DicesWindow extends Component<DiceWindowProps> {
+  componentDidUpdate(prevPros: DiceWindowProps) {
+    if (this.props.open) {
       setTimeout(() => {
         this.props.handleClose()
         this.props.onFinishRoll()
@@ -38,7 +42,7 @@ class DicesWindow extends Component {
         <Modal basic open={open}>
           {/* Dice component is mounted again when dialog is open 
           cause of required dice init logic in componentDidMount */}
-          {open && rollingDices && <Dices3d dices={dices} />}
+          {rollingDices && <Dices3d dices={dices} />}
         </Modal>
       </div>
     )

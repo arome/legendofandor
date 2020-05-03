@@ -19,9 +19,9 @@ export default () => {
   const { gameID } = useParams()
   const history = useHistory()
   const [playerName, setPlayerName] = useState('')
-  const [playerID, setPlayerID] = useState(null)
-  const [players, setPlayers] = useState([])
-  const [uid, setUid] = useState(null)
+  const [playerID, setPlayerID] = useState<number | null>(null)
+  const [players, setPlayers] = useState<any[]>([])
+  const [uid, setUid] = useState<string | null>(null)
   const [credentials, setCredentials] = useState('')
   const [openPlayerName, setOpenPlayerName] = useState(false)
   const [openHeroSelection, setOpenHeroSelection] = useState(false)
@@ -38,19 +38,19 @@ export default () => {
     setOpenHeroSelection(false)
   }
 
-  const getPlayerName = (pid) => {
+  const getPlayerName = (pid: number) => {
     setPlayerID(pid)
     setOpenPlayerName(true)
   }
 
-  const updateCookie = (fieldsToUpdate) => {
+  const updateCookie = (fieldsToUpdate: { [key: string]: any }) => {
     let newCookie = Cookies.load('lobby') || {}
     if (!(gameID in newCookie)) newCookie[gameID] = {}
     for (const key in fieldsToUpdate) newCookie[gameID][key] = fieldsToUpdate[key]
     Cookies.save('lobby', newCookie, { path: '/' })
   }
 
-  const joinGame = (playerID, playerName) => {
+  const joinGame = (playerID: number, playerName: string) => {
     setOpenPlayerName(false)
     Axios.post(`${server}/games/${name}/${gameID}/join`, { playerID, playerName }).then((res) => {
       const credentials = res.data.playerCredentials
@@ -76,7 +76,7 @@ export default () => {
     })
   }
 
-  const updateHero = (newHero) => {
+  const updateHero = (newHero: string) => {
     const [name, hero] = playerName.split(separator)
     if (hero !== newHero) {
       const newName = `${name}${separator}${newHero}`
@@ -112,14 +112,14 @@ export default () => {
     CometChat.addMessageListener(
       CUSTOMER_MESSAGE_LISTENER_KEY,
       new CometChat.MessageListener({
-        onTextMessageReceived: (message) => {
+        onTextMessageReceived: (message: any) => {
           addResponseMessage(message.text)
         },
       })
     )
   }
 
-  const fetchPreviousMessages = (uid) => {
+  const fetchPreviousMessages = (uid: string) => {
     var messagesRequest = new CometChat.ConversationsRequestBuilder().setLimit(50).setConversationType('group').build()
     messagesRequest.fetchNext().then((conversationList) => {
       const message = conversationList[0].getLastMessage()
@@ -154,7 +154,9 @@ export default () => {
     const interval = setInterval(() => {
       Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
         const players = res.data.players
-        const playersReady = players.map((player) => player.name && player.name.split(separator).length === 3)
+        const playersReady: boolean[] = players.map(
+          (player: any) => player.name && player.name.split(separator).length === 3
+        )
         let ready = playersReady.length > 0 && playersReady.every((v) => v)
 
         setPlayers(players)
@@ -181,7 +183,7 @@ export default () => {
     backgroundSize: '100% 100%',
   }
 
-  const displayPlayerFooter = (id, name, ready) => {
+  const displayPlayerFooter = (id: number, name: string, ready: boolean) => {
     let footer
     if (name)
       footer = (
@@ -224,7 +226,7 @@ export default () => {
     return status
   }
 
-  const handleNewUserMessage = (newMessage) => {
+  const handleNewUserMessage = (newMessage: string) => {
     var textMessage = new CometChat.TextMessage(
       'legendofandor',
       `${playerName.split(separator)[0]}: ${newMessage}`,
