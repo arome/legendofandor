@@ -5,8 +5,8 @@ interface ModalProps {
 export interface CreateGameModalProps extends ModalProps { }
 export interface JoinGameModalProps extends ModalProps { }
 export interface ResourceSplitProps extends ModalProps {
-    tempSplit: { [key: number]: { gold?: number, wineskin?: number } }
-    resources: { gold?: number, wineskin?: number }
+    current: { [key: number]: { gold?: number, wineskin?: number } }
+    total: { gold?: number, wineskin?: number }
     names: string[]
     add(type: 'gold' | 'wineskin', quantity: number, id: number): void
     splitResource(): any

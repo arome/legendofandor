@@ -17,7 +17,7 @@ const JoinGameModal = (props: JoinGameModalProps) => {
     setError(error)
     Axios.get(`${server}/games/${name}/${id}`)
       .then(() => {
-        history.push(`/lobby/${id}`)
+        history.push(`/lobby`, { gameID: id })
       })
       .catch(() =>
         Swal.fire({

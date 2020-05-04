@@ -2,7 +2,7 @@ import tiles from './pages/tiles'
 import { heroes, name } from './common'
 import { Character, Hero, HeroType, Monster } from './models/Character'
 import { Ctx } from 'boardgame.io'
-import { IG } from './models/Game'
+import { IG, ItemType } from './models/Game'
 import { UsableToken, FarmerToken } from './models/Token'
 
 function distance(from: any, to: any) {
@@ -95,6 +95,7 @@ const allPlayersMove = {
     const farmer = G.tokens[farmerTokenIndex] as FarmerToken;
     farmer.picked = true;
     G.tokens[farmerTokenIndex] = farmer;
+    G.status = 'farmer picked'
     G.players[ctx.playerID ?? 0].pickedFarmer.push(farmer.startingPos)
   },
   dropFarmer(G: IG, ctx: Ctx, farmerTokenIndex: number) {
@@ -118,7 +119,7 @@ const allPlayersMove = {
         // @ts-ignore
         ctx.events?.endTurn();
       }
-      G.status = null
+      G.status = ''
     },
     noLimit: true,
     redact: true
@@ -199,12 +200,10 @@ const LegendOfAndor = {
       letter: 'A',
       tokens,
       monsters,
-      messages: [],
       fight: {},
-      status: null,
+      status: '',
       castleDefense: 5 - ctx.numPlayers,
-      splittableResource: {},
-      tempSplit: {},
+      resources: {},
       init: false,
     }
   },
@@ -224,8 +223,10 @@ const LegendOfAndor = {
             strength: 2,
             willpower: 7,
             pickedFarmer: [],
-            gold: 0,
-            wineskin: 0,
+            items: {
+              gold: 0,
+              wineskin: 0
+            },
             positionOnMap,
             endDay: false,
             hoveredArea: null,
@@ -236,16 +237,15 @@ const LegendOfAndor = {
           players[i].specialAbilities[specialAbility] = true
         }
         G.players = players;
-        G.splittableResource = { gold: 5, wineskin: 2 }
+        G.resources.total = { gold: 5, wineskin: 2 }
         let tempSplit: { [key: number]: { [key: string]: number } } = {}
         for (let i = 0; i < ctx.numPlayers; i++) {
           let initObject: { [key: string]: number } = {}
-          Object.keys(G.splittableResource).forEach((type: string) => {
+          for (const type in G.resources.total)
             initObject[type] = 0
-          })
           tempSplit[i] = initObject
         }
-        G.tempSplit = tempSplit
+        G.resources.current = tempSplit
         G.init = true
         //@ts-ignore
         ctx.events?.setActivePlayers({ all: 'splitresource' })
@@ -359,7 +359,7 @@ const LegendOfAndor = {
               numDice: [2, 3, 3],
               willpower: 4,
               strength: 2,
-              reward: {
+              rewards: {
                 gold: 2,
                 willpower: 2,
               },
@@ -370,7 +370,7 @@ const LegendOfAndor = {
               type: 'Skrall',
               numDice: [2, 3, 3],
               willpower: 6,
-              reward: {
+              rewards: {
                 gold: 4,
                 willpower: 4,
               },
@@ -384,7 +384,7 @@ const LegendOfAndor = {
                 numDice: [2, 3, 3],
                 willpower: 4,
                 strength: 2,
-                reward: {
+                rewards: {
                   gold: 2,
                   willpower: 2,
                 },
@@ -394,11 +394,11 @@ const LegendOfAndor = {
             }
             G.monsters = newMonsters
           }
-          G.players[ctx.currentPlayer].gold += monster.reward.gold
-          G.players[ctx.currentPlayer].willpower += monster.reward.willpower
+          G.players[ctx.currentPlayer].items.gold += monster.rewards.gold
+          G.players[ctx.currentPlayer].willpower += monster.rewards.willpower
           summary += `<p>The ${monster.type} has been defeated!</p>
-        <p>${currentPlayer(G, ctx).name} received ${monster.reward.gold} golds and ${
-            monster.reward.willpower
+        <p>${currentPlayer(G, ctx).name} received ${monster.rewards.gold} golds and ${
+            monster.rewards.willpower
             } willpowers.</p>`
         } else if (G.players[ctx.currentPlayer].willpower < 1) {
           G.players[ctx.currentPlayer].willpower = 3
@@ -495,7 +495,7 @@ const LegendOfAndor = {
             numDice: [2, 3, 3],
             willpower: 4,
             strength: 2,
-            reward: {
+            rewards: {
               gold: 2,
               willpower: 2,
             },
@@ -506,7 +506,7 @@ const LegendOfAndor = {
             type: 'Skrall',
             numDice: [2, 3, 3],
             willpower: 6,
-            reward: {
+            rewards: {
               gold: 4,
               willpower: 4,
             },
@@ -520,7 +520,7 @@ const LegendOfAndor = {
               numDice: [2, 3, 3],
               willpower: 4,
               strength: 2,
-              reward: {
+              rewards: {
                 gold: 2,
                 willpower: 2,
               },
@@ -551,25 +551,21 @@ const LegendOfAndor = {
       splitresource: {
         moves: {
           add: {
-            move: (G: IG, ctx: Ctx, type: 'gold' | 'wineskin', quantity: number, playerID: number) => {
-              let currentTotal = 0
-              Object.keys(G.tempSplit).forEach((key) =>
-                (currentTotal += G.tempSplit[parseInt(key)][type] ?? 0)
-              )
-              if ((G.tempSplit[playerID][type] ?? 0) + quantity >= 0 && currentTotal + quantity <= (G.splittableResource[type] ?? 0))
-                G.tempSplit[playerID][type] = (G.tempSplit[playerID][type] ?? 0) + quantity
+            move: (G: IG, ctx: Ctx, type: ItemType, quantity: number, playerID: string) => {
+              G.resources.current[playerID][type] = (G.resources.current[playerID][type] ?? 0) + quantity
             },
             redact: true,
             noLimit: true
           },
           splitResource: {
             move: (G: IG, ctx: Ctx) => {
-              Object.keys(G.tempSplit).forEach((key) => {
-                const res = G.tempSplit[parseInt(key)]
-                Object.keys(res).map((type) => (G.players[key][type as 'gold' | 'wineskin'] += res[type as 'gold' | 'wineskin'] ?? 0))
-              })
-              G.tempSplit = {}
-              G.splittableResource = {}
+              for (const playerID in G.resources.current) {
+                const resources = G.resources.current[playerID]
+                for (const type in resources)
+                  G.players[playerID]['items'][type as ItemType] += resources[type as ItemType] ?? 0
+              }
+              G.resources.current = {}
+              G.resources.total = {}
               // @ts-ignore
               ctx.events?.setActivePlayers({ others: 'displayMapInput', currentPlayer: 'play' })
             },

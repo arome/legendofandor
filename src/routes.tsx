@@ -7,7 +7,7 @@ import BoardGame from './pages/BoardGame'
 
 export const routes = [
   { path: 'start-game', component: BoardGame },
-  { path: 'lobby/:gameID', component: Lobby },
+  { path: 'lobby', component: Lobby },
   { path: 'test-lobby', component: TestLobby },
   { path: '/', component: StartMenu },
 ]

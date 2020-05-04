@@ -1,6 +1,9 @@
+import { ItemType } from "./Game"
+
 export type HeroType = 'Archer_female' | 'Archer_male' | 'Mage_female' | 'Mage_male' | 'Warrior_female' | 'Warrior_male' | 'Dwarf_female' | 'Dwarf_male'
 export type MonsterType = 'Gor' | 'Skrall'
 export type SpecialAbility = 'proxyAttack' | 'bait' | 'wellPower' | 'flipDice'
+export type RewardType = 'gold' | 'willpower'
 
 export interface Character {
     readonly numDice: number[];
@@ -12,7 +15,7 @@ export interface Character {
 
 export interface Monster extends Character {
     readonly type: MonsterType;
-    readonly reward: { [key: string]: number };
+    readonly rewards: { [key in RewardType]: number };
     readonly startingPos: number;
 }
 
@@ -22,8 +25,7 @@ export interface Hero extends Character {
     hoursPassed: number;
     specialAbilities: { [key in SpecialAbility]: boolean };
     pickedFarmer: number[];
-    gold: number;
-    wineskin: number;
+    items: { [key in ItemType]: number }
     endDay: boolean;
     hoveredArea: any;
     path: number[][];

@@ -3,7 +3,7 @@ import background from '../assets/images/Lobby.jpg'
 import Cookies from 'react-cookies'
 import Axios from 'axios'
 import { server, name, chatApiKey } from '../common'
-import { useParams, useHistory } from 'react-router-dom'
+import { useHistory } from 'react-router-dom'
 import './Lobby.scss'
 import { Button } from 'semantic-ui-react'
 import PlayerNameModal from '../modals/PlayerNameModal'
@@ -16,9 +16,15 @@ import 'react-chat-widget/lib/styles.css'
 import { CometChat } from '@cometchat-pro/chat'
 import { HeroType } from '../models/Character'
 
+export interface GameMetadata {
+  id: number
+  name: string
+  data: { hero: HeroType; ready: boolean }
+}
+
 export default () => {
-  const { gameID } = useParams()
   const history = useHistory()
+  const { gameID } = history.location.state as { gameID: string }
   const [playerID, setPlayerID] = useState<number | null>(null)
   const [players, setPlayers] = useState<any[]>([])
   const [uid, setUid] = useState<string | null>(null)
@@ -147,8 +153,8 @@ export default () => {
   useEffect(() => {
     const interval = setInterval(() => {
       Axios.get(`${server}/games/${name}/${gameID}`).then((res) => {
-        const players = res.data.players
-        const ready: boolean[] = players.length > 0 && players.every((player: any) => player.data?.ready)
+        const players = res.data.players as GameMetadata[]
+        const ready = players.length > 0 && players.every((player: any) => player.data?.ready)
         setPlayers(players)
         setLoading(false)
         ready &&

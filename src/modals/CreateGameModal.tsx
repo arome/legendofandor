@@ -22,9 +22,9 @@ const CreateGameModal = (props: CreateGameModalProps) => {
       .then((res) => {
         const { gameID } = res.data
         setLoading(false)
-        history.push(`/lobby/${gameID}`)
+        history.push(`/lobby`, { gameID })
       })
-      .catch((e) => setLoading(false))
+      .catch(() => setLoading(false))
   }
 
   return (
@@ -50,17 +50,19 @@ const CreateGameModal = (props: CreateGameModalProps) => {
               label="Easy"
               value="easy"
               checked={difficulty === 'easy'}
-              onChange={(e) => setDifficulty('easy')}
+              onChange={() => setDifficulty('easy')}
             />
             <Form.Radio
               label="Hard"
               value="hard"
               checked={difficulty === 'hard'}
-              onChange={(e) => setDifficulty('hard')}
+              onChange={() => setDifficulty('hard')}
             />
           </Form.Group>
           <Form.Group>
-            <Form.Button loading={loading} className="button">Create Game</Form.Button>
+            <Form.Button loading={loading} className="button">
+              Create Game
+            </Form.Button>
           </Form.Group>
         </Form>
       </Modal.Content>

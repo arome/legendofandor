@@ -2,15 +2,14 @@ import { Game } from 'boardgame.io';
 import { Hero, Monster } from './Character';
 import { Token } from './Token';
 
-export type Resource = 'gold' | 'wineskin'
+export type ItemType = 'gold' | 'wineskin'
 export interface IG extends Game {
     readonly difficulty: 'easy' | 'hard';
     players: { [key: string]: Hero }
     monsters: Monster[];
     tokens: Token[];
-    status: string | null;
+    status: string;
     castleDefense: number;
-    dices: number[];
     rollingDices: number[];
     letter: string;
     fight: {
@@ -20,7 +19,9 @@ export interface IG extends Game {
         result?: any;
         summary?: string;
     };
-    splittableResource: { gold?: number, wineskin?: number }
-    tempSplit: { [key: number]: { gold?: number, wineskin?: number } }
+    resources: {
+        total: { gold?: number, wineskin?: number }
+        current: { [key: string]: { gold?: number, wineskin?: number } }
+    },
     init: boolean;
 }

@@ -24,12 +24,7 @@ import { HeroType } from '../models/Character'
 import { Ctx } from 'boardgame.io'
 import { IG } from '../models/Game'
 import { TokenType, FarmerToken, UsableToken } from '../models/Token'
-
-interface GameMetadata {
-  id: number
-  name: string
-  data: { hero: HeroType; ready: boolean }
-}
+import { GameMetadata } from './Lobby'
 
 interface GameBoardProps {
   G: IG
@@ -190,12 +185,25 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   }
 
   isActivePlayer = () => this.props.playerID === this.props.ctx.currentPlayer
-  getTurnPlayer = () => this.props.G.players[this.props.ctx.currentPlayer]
-  getMyPlayer = () => this.props.G.players[this.props.playerID]
+  getPlayer = (who: string | number) => {
+    let player
+    switch (who) {
+      case 'me':
+        player = this.props.G.players[this.props.playerID]
+        break
+      case 'turn':
+      default:
+        if (typeof who === 'number') {
+          who = who >= 0 && who < this.props.ctx.numPlayers ? who : who < 0 ? 0 : this.props.ctx.numPlayers - 1
+        } else who = this.props.ctx.currentPlayer
+        player = this.props.G.players[who]
+    }
+    return player
+  }
 
   clicked(area: Area) {
     const to = parseInt(area.name ?? '0')
-    const myPath = this.getMyPlayer().path
+    const myPath = this.getPlayer('me').path
     const lastSelected = myPath.length > 0 ? myPath[myPath.length - 1][1] : null
     lastSelected === to
       ? this.isActivePlayer() &&
@@ -213,7 +221,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
           'value' in result
             ? this.props.moves.move(to)
             : result.dismiss === Swal.DismissReason.cancel &&
-              this.props.moves.drawPath(lastSelected, this.props.G.players[this.props.playerID].positionOnMap)
+              this.props.moves.drawPath(lastSelected, this.getPlayer('me').positionOnMap)
         })
       : this.props.moves.drawPath(lastSelected, to)
   }
@@ -230,7 +238,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
     const center = this.computeCenter(this.MAP.areas[position])
     const monstersInArea = this.props.G.monsters.filter((monster) => monster.positionOnMap === position)
     const heroesInArea: any[] = Object.keys(this.props.G.players).filter(
-      (playerID) => this.props.G.players[playerID].positionOnMap === position
+      (playerID) => this.getPlayer(parseInt(playerID)).positionOnMap === position
     )
     const charactersInArea = heroesInArea.concat(monstersInArea)
     const pos = charactersInArea.findIndex((character) => {
@@ -337,12 +345,12 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
         paths.push({
           circle: { color: this.playersColor[i], radius: 10 },
           line: { color: this.playersColor[i] },
-          steps: this.props.G.players[i].path,
+          steps: this.getPlayer(i).path,
         })
     paths.push({
       circle: { color: this.playersColor[parseInt(this.props.playerID)], radius: 10 },
       line: { color: this.playersColor[parseInt(this.props.playerID)] },
-      steps: this.props.G.players[this.props.playerID].path,
+      steps: this.getPlayer('me').path,
     })
     return paths
   }
@@ -351,11 +359,11 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
     const numPlayers = this.props.ctx.numPlayers
     const hoveredAreas = []
     for (let i = 0; i < numPlayers; i++) {
-      const hoveredArea = this.props.G.players[i].hoveredArea
+      const hoveredArea = this.getPlayer(i).hoveredArea
       if (i !== parseInt(this.props.playerID) && hoveredArea)
         hoveredAreas.push({ ...hoveredArea, strokeColor: this.playersColor[i], _id: i })
     }
-    const myHoveredArea = this.props.G.players[this.props.playerID].hoveredArea
+    const myHoveredArea = this.getPlayer('me').hoveredArea
     myHoveredArea &&
       hoveredAreas.push({
         ...myHoveredArea,
@@ -367,13 +375,13 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
 
   canPickFarmer = () => {
     const farmersToken = this.props.G.tokens.filter(
-      (token) => token.type === 'farmer' && token.positionOnMap === this.getMyPlayer().positionOnMap
+      (token) => token.type === 'farmer' && token.positionOnMap === this.getPlayer('me').positionOnMap
     ) as FarmerToken[]
     const farmers = farmersToken.map((farmer) => farmer.startingPos)
     if (farmers.length > 0) {
       return farmers.some((farmerPosition) => {
         for (let i = 0; i < this.props.ctx.numPlayers; i++)
-          if (this.props.G.players[i].pickedFarmer.includes(farmerPosition)) return false
+          if (this.getPlayer(i).pickedFarmer.includes(farmerPosition)) return false
         return true
       })
     } else {
@@ -382,44 +390,69 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   }
 
   canDropFarmer = () => {
-    return this.getMyPlayer().pickedFarmer.length > 0
+    return this.getPlayer('me').pickedFarmer.length > 0
   }
 
   pickDropFarmer = () => {
-    const farmerTokenIndex = this.props.G.tokens.findIndex(
-      (token) => token.type === 'farmer' && token.positionOnMap === this.getMyPlayer().positionOnMap
-    )
-    const farmer = this.props.G.tokens[farmerTokenIndex] as FarmerToken
-    const startPos = farmer.startingPos
-    if (!farmer.picked) {
+    if (this.canPickFarmer() && this.canDropFarmer()) {
+      let inputOptions = { pick: 'Pick', drop: 'Drop' }
       Swal.fire({
-        icon: 'success',
-        title: 'Farmer picked!',
-        text: `Bring him to the castle to increase the castle defense.`,
+        title: 'Would you like to pick or drop a farmer?',
+        input: 'select',
+        inputOptions,
+        inputPlaceholder: 'Choose your action',
+        showCancelButton: true,
+      }).then((res) => {
+        if ('value' in res) {
+          console.log('res.value', res.value)
+          const pickedFarmerPosition = this.getPlayer('me').pickedFarmer[0]
+          const farmerToDrop = this.props.G.tokens.findIndex((token) => {
+            if (token.type === 'farmer') {
+              const farmer = token as FarmerToken
+              return farmer.startingPos === pickedFarmerPosition
+            }
+            return false
+          })
+          const farmerToPick = this.props.G.tokens.findIndex((token) => {
+            if (token.type === 'farmer') {
+              const farmer = token as FarmerToken
+              return farmer.startingPos !== pickedFarmerPosition
+            }
+            return false
+          })
+          res.value === 'pick' ? this.props.moves.pickFarmer(farmerToPick) : this.props.moves.dropFarmer(farmerToDrop)
+        }
       })
-      this.props.moves.pickFarmer(farmerTokenIndex)
-    } else if (farmer.picked && this.getMyPlayer().pickedFarmer.includes(startPos)) {
-      let text = ''
-      if (this.getMyPlayer().positionOnMap === 0) {
-        text = `You brought the farmer to the castle! The castle defense has increased to ${
-          this.props.G.castleDefense + 1
-        }`
-      } else {
-        text = `You left the farmer at tile ${this.getMyPlayer().positionOnMap}. If a monster reaches him, he's toast!`
+    } else {
+      const farmerTokenIndex = this.props.G.tokens.findIndex(
+        (token) => token.type === 'farmer' && token.positionOnMap === this.getPlayer('me').positionOnMap
+      )
+      if (this.canPickFarmer()) this.props.moves.pickFarmer(farmerTokenIndex)
+      else {
+        let text = ''
+        if (this.getPlayer('me').positionOnMap === 0) {
+          text = `You brought the farmer to the castle! The castle defense has increased to ${
+            this.props.G.castleDefense + 1
+          }`
+        } else {
+          text = `You left the farmer at tile ${
+            this.getPlayer('me').positionOnMap
+          }. If a monster reaches him, he's toast!`
+        }
+        Swal.fire({
+          icon: this.getPlayer('me').positionOnMap === 0 ? 'success' : 'info',
+          title: 'Farmer dropped!',
+          text,
+        })
+        this.props.moves.dropFarmer(farmerTokenIndex)
       }
-      Swal.fire({
-        icon: this.getMyPlayer().positionOnMap === 0 ? 'success' : 'info',
-        title: 'Farmer dropped!',
-        text,
-      })
-      this.props.moves.dropFarmer(farmerTokenIndex)
     }
   }
 
   canDrink = () => {
     const { tokens } = this.props.G
     const wellTokenIndex = tokens.findIndex(
-      (token) => token.type === 'well' && token.positionOnMap === this.getMyPlayer().positionOnMap
+      (token) => token.type === 'well' && token.positionOnMap === this.getPlayer('me').positionOnMap
     )
     const well = tokens[wellTokenIndex] as UsableToken
     return wellTokenIndex > -1 && !well.used
@@ -427,9 +460,9 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
 
   drink = () => {
     const wellTokenIndex = this.props.G.tokens.findIndex(
-      (token) => token.type === 'well' && token.positionOnMap === this.getMyPlayer().positionOnMap
+      (token) => token.type === 'well' && token.positionOnMap === this.getPlayer('me').positionOnMap
     )
-    const willpower = this.getMyPlayer().specialAbilities.wellPower ? 5 : 3
+    const willpower = this.getPlayer('me').specialAbilities.wellPower ? 5 : 3
     Swal.fire({
       icon: 'success',
       title: 'Yummy!',
@@ -439,15 +472,16 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   }
 
   canFight = () => {
-    const position = this.getTurnPlayer().positionOnMap
-    const hoursPassed = this.getTurnPlayer().hoursPassed
+    const position = this.getPlayer('turn').positionOnMap
+    const hoursPassed = this.getPlayer('turn').hoursPassed
     const monsters = this.props.G.monsters.filter(
       (monster) =>
         monster.positionOnMap === position ||
-        (this.getTurnPlayer().specialAbilities.proxyAttack && tiles.neighbors[position].includes(monster.positionOnMap))
+        (this.getPlayer('turn').specialAbilities.proxyAttack &&
+          tiles.neighbors[position].includes(monster.positionOnMap))
     )
     if (this.isActivePlayer() && monsters.length > 0 && hoursPassed < 10) {
-      if (hoursPassed < 7 || (hoursPassed >= 7 && this.getTurnPlayer().willpower >= 3)) {
+      if (hoursPassed < 7 || (hoursPassed >= 7 && this.getPlayer('turn').willpower >= 3)) {
         return true
       }
     }
@@ -455,11 +489,12 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   }
 
   fight = () => {
-    const position = this.getTurnPlayer().positionOnMap
+    const position = this.getPlayer('turn').positionOnMap
     const monsters = this.props.G.monsters.filter(
       (monster) =>
         monster.positionOnMap === position ||
-        (this.getTurnPlayer().specialAbilities.proxyAttack && tiles.neighbors[position].includes(monster.positionOnMap))
+        (this.getPlayer('turn').specialAbilities.proxyAttack &&
+          tiles.neighbors[position].includes(monster.positionOnMap))
     )
     if (monsters.length > 1) {
       let inputOptions: { [inputValue: string]: string } = {}
@@ -572,7 +607,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   handleNewUserMessage = (newMessage: string) => {
     var textMessage = new CometChat.TextMessage(
       'legendofandor',
-      `${this.getMyPlayer().name}: ${newMessage}`,
+      `${this.getPlayer('me').name}: ${newMessage}`,
       CometChat.RECEIVER_TYPE.GROUP
     )
     CometChat.sendMessage(textMessage)
@@ -584,6 +619,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
       let title = ''
       let html = ''
       let timer = 1000
+      let icon = 'info' as 'error' | 'question' | 'success' | 'warning' | 'info' | undefined
       if (status === 'new day') {
         title = 'A new day has started'
         timer = 6000
@@ -597,6 +633,10 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
       } else if (status === 'next turn') {
         title = `${this.props.G.players[this.props.ctx.currentPlayer].name} turn has started`
         timer = 1000
+      } else if (status === 'farmer picked') {
+        icon = 'success'
+        title = 'Farmer picked!'
+        html = 'Bring him to the castle to increase the castle defense.'
       } else if (status === 'fight summary') {
         title = 'Fight Summary'
         if (this.props.G.fight.result) {
@@ -616,11 +656,12 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
         html = 'You lost, loser.'
         timer = 10000000000
       }
-      if (status === 'next turn' && this.getTurnPlayer().endDay) {
+      if (status === 'next turn' && this.getPlayer('turn').endDay) {
         this.props.moves.clearStatus()
       } else {
         Swal.fire({
           title,
+          icon,
           html,
           timer,
           timerProgressBar: true,
@@ -643,7 +684,6 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   }
 
   render() {
-    console.log('this', this)
     const override = css`
       position: absolute;
       top: 50%;
@@ -673,9 +713,9 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
               hoveredAreas={this.getHoveredAreas()}
               paths={this.getPaths()}
             />
-            {this.getMyPlayer().hoveredArea && (
-              <span className="tooltip" style={{ ...this.getTipPosition(this.getMyPlayer().hoveredArea) }}>
-                {this.getMyPlayer().hoveredArea?.name}
+            {this.getPlayer('me').hoveredArea && (
+              <span className="tooltip" style={{ ...this.getTipPosition(this.getPlayer('me').hoveredArea) }}>
+                {this.getPlayer('me').hoveredArea?.name}
               </span>
             )}
 
@@ -762,10 +802,10 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
         />
         <ResourceSplit
           splitResource={this.props.moves.splitResource}
-          resources={this.props.G.splittableResource}
+          total={this.props.G.resources.total}
           add={this.props.moves.add}
-          tempSplit={this.props.G.tempSplit}
-          open={!this.isEmpty(this.props.G.splittableResource)}
+          current={this.props.G.resources.current}
+          open={!this.isEmpty(this.props.G.resources.total)}
           names={this.props.gameMetadata.map((player: any) => player.name)}
         />
         <Widget title="In Game Chat" subtitle="" handleNewUserMessage={this.handleNewUserMessage} />

@@ -9,13 +9,13 @@ import { ResourceSplitProps } from '../models/Modal'
 export default (props: ResourceSplitProps) => {
   let goldSelected = 0
   let wineskinSelected = 0
-  for (const playerID in props.tempSplit) {
-    const player = props.tempSplit[playerID]
+  for (const playerID in props.current) {
+    const player = props.current[playerID]
     goldSelected += player.gold ?? 0
     wineskinSelected += player.wineskin ?? 0
   }
-  const remainingGold = (props.resources.gold ?? 0) - goldSelected
-  const remainingWineskin = (props.resources.wineskin ?? 0) - wineskinSelected
+  const remainingGold = (props.total?.gold ?? 0) - goldSelected
+  const remainingWineskin = (props.total?.wineskin ?? 0) - wineskinSelected
   return (
     <Modal size="mini" open={props.open} closeOnDimmerClick={false} closeIcon={false}>
       <Modal.Header>Ressource Splitter</Modal.Header>
@@ -36,32 +36,32 @@ export default (props: ResourceSplitProps) => {
         </div>
 
         {props.names.map((name, index) => {
+          const player = (props.current && props.current[index]) ?? { gold: 0, wineskin: 0 }
           return (
             <div className="player-row" key={index}>
               <h3>{name}</h3>
               <div className="money">
                 <RiCoinLine />
                 <div className="button-group">
-                  <button onClick={() => props.add('gold', -1, index)}>-</button>
-                  <button onClick={() => props.add('gold', 1, index)}>+</button>
+                  <button onClick={() => (player.gold ?? 0) > 0 && props.add('gold', -1, index)}>-</button>
+                  <button onClick={() => remainingGold > 0 && props.add('gold', 1, index)}>+</button>
                 </div>
-                <span>{props.tempSplit[index]?.gold}</span>
+                <span>{player.gold}</span>
               </div>
               <div>
                 <IoMdWine />
                 <div className="button-group">
-                  <button onClick={() => props.add('wineskin', -1, index)}>-</button>
-                  <button onClick={() => props.add('wineskin', 1, index)}>+</button>
+                  <button onClick={() => (player.wineskin ?? 0) && props.add('wineskin', -1, index)}>-</button>
+                  <button onClick={() => remainingWineskin > 0 && props.add('wineskin', 1, index)}>+</button>
                 </div>
-                <span>{props.tempSplit[index]?.wineskin}</span>
+                <span>{player.wineskin}</span>
               </div>
             </div>
           )
         })}
         <Button
           onClick={() => {
-            if (props.resources.gold === goldSelected && props.resources.wineskin === wineskinSelected)
-              props.splitResource()
+            props.total?.gold === goldSelected && props.total?.wineskin === wineskinSelected && props.splitResource()
           }}
         >
           Split Resources
