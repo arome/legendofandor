@@ -7,7 +7,7 @@ import serve from 'koa-static'
 const PORT = parseInt(process.env.PORT ?? '8000')
 const server = Server({ games: [LegendOfAndor] })
 
-const root = path.resolve(__dirname, './build')
+const root = path.resolve(__dirname, '../build')
 server.app.use(serve(root))
 
 server.run(PORT, () => {
