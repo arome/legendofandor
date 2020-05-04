@@ -65,22 +65,22 @@ export default () => {
       setCredentials(credentials)
       updateCookie({ credentials, playerID })
 
-      const uid = `player${playerID}`
-      // const uid = new Date().getTime().toString()
-      // var user = new CometChat.User(uid)
-      // user.setName(playerName)
-      // CometChat.createUser(user, chatApiKey)
-      //   .then(() => {
-      CometChat.login(uid, chatApiKey).then(() =>
-        CometChat.joinGroup('legendofandor', CometChat.GROUP_TYPE.PUBLIC).then(() => {
-          setUid(uid)
-          updateCookie({ uid })
-          createMessageListener()
-          fetchPreviousMessages(uid)
+      // const uid = `player${playerID}`
+      const uid = new Date().getTime().toString()
+      var user = new CometChat.User(uid)
+      user.setName(playerName)
+      CometChat.createUser(user, chatApiKey)
+        .then(() => {
+          CometChat.login(uid, chatApiKey).then(() =>
+            CometChat.joinGroup('legendofandor', CometChat.GROUP_TYPE.PUBLIC).then(() => {
+              setUid(uid)
+              updateCookie({ uid })
+              createMessageListener()
+              fetchPreviousMessages(uid)
+            })
+          )
         })
-      )
-      // })
-      // .catch((e) => console.log('user creation failed e:', e))
+        .catch((e) => console.log('user creation failed e:', e))
     })
   }
 
