@@ -23,7 +23,7 @@ import { CometChat } from '@cometchat-pro/chat'
 import { HeroType } from '../models/Character'
 import { Ctx } from 'boardgame.io'
 import { IG } from '../models/Game'
-import { TokenType, FarmerToken, UsableToken } from '../models/Token'
+import { TokenType } from '../models/Token'
 import { GameMetadata } from './Lobby'
 
 interface GameBoardProps {
@@ -132,7 +132,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
       if (this.props.G.rollingDices.length > 0 && this.props.G.fight.turn !== prevProps.G.fight.turn) {
         this.setState({ openDice: true })
       }
-      if (this.props.G.status && this.props.G.status !== prevProps.G.status) this.displayStatusMessage()
+      if (this.props.G.status.id && this.props.G.status.id !== prevProps.G.status.id) this.displayStatusMessage()
     }
   }
 
@@ -221,7 +221,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
           'value' in result
             ? this.props.moves.move(to)
             : result.dismiss === Swal.DismissReason.cancel &&
-              this.props.moves.drawPath(lastSelected, this.getPlayer('me').positionOnMap)
+              this.props.moves.drawPath(lastSelected, this.getPlayer('me').position)
         })
       : this.props.moves.drawPath(lastSelected, to)
   }
@@ -236,9 +236,9 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
 
   getPlayerPosition(position: number, id: any) {
     const center = this.computeCenter(this.MAP.areas[position])
-    const monstersInArea = this.props.G.monsters.filter((monster) => monster.positionOnMap === position)
+    const monstersInArea = this.props.G.monsters.filter((monster) => monster.position === position)
     const heroesInArea: any[] = Object.keys(this.props.G.players).filter(
-      (playerID) => this.getPlayer(parseInt(playerID)).positionOnMap === position
+      (playerID) => this.getPlayer(parseInt(playerID)).position === position
     )
     const charactersInArea = heroesInArea.concat(monstersInArea)
     const pos = charactersInArea.findIndex((character) => {
@@ -374,14 +374,12 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   }
 
   canPickFarmer = () => {
-    const farmersToken = this.props.G.tokens.filter(
-      (token) => token.type === 'farmer' && token.positionOnMap === this.getPlayer('me').positionOnMap
-    ) as FarmerToken[]
-    const farmers = farmersToken.map((farmer) => farmer.startingPos)
+    const farmers = this.props.G.tokens.farmer.filter((farmer) => farmer.position === this.getPlayer('me').position)
     if (farmers.length > 0) {
-      return farmers.some((farmerPosition) => {
+      const farmersId = farmers.map((farmer) => farmer.id)
+      return farmersId.some((farmerId) => {
         for (let i = 0; i < this.props.ctx.numPlayers; i++)
-          if (this.getPlayer(i).pickedFarmer.includes(farmerPosition)) return false
+          if (this.getPlayer(i).pickedFarmers.includes(farmerId)) return false
         return true
       })
     } else {
@@ -390,7 +388,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   }
 
   canDropFarmer = () => {
-    return this.getPlayer('me').pickedFarmer.length > 0
+    return this.getPlayer('me').pickedFarmers.length > 0
   }
 
   pickDropFarmer = () => {
@@ -404,81 +402,36 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
         showCancelButton: true,
       }).then((res) => {
         if ('value' in res) {
-          console.log('res.value', res.value)
-          const pickedFarmerPosition = this.getPlayer('me').pickedFarmer[0]
-          const farmerToDrop = this.props.G.tokens.findIndex((token) => {
-            if (token.type === 'farmer') {
-              const farmer = token as FarmerToken
-              return farmer.startingPos === pickedFarmerPosition
-            }
-            return false
-          })
-          const farmerToPick = this.props.G.tokens.findIndex((token) => {
-            if (token.type === 'farmer') {
-              const farmer = token as FarmerToken
-              return farmer.startingPos !== pickedFarmerPosition
-            }
-            return false
-          })
+          const pickedFarmerId = this.getPlayer('me').pickedFarmers[0]
+          const farmerToDrop = this.props.G.tokens.farmer.findIndex((farmer) => farmer.id === pickedFarmerId)
+          const farmerToPick = this.props.G.tokens.farmer.findIndex((farmer) => farmer.id !== pickedFarmerId)
           res.value === 'pick' ? this.props.moves.pickFarmer(farmerToPick) : this.props.moves.dropFarmer(farmerToDrop)
         }
       })
     } else {
-      const farmerTokenIndex = this.props.G.tokens.findIndex(
-        (token) => token.type === 'farmer' && token.positionOnMap === this.getPlayer('me').positionOnMap
-      )
-      if (this.canPickFarmer()) this.props.moves.pickFarmer(farmerTokenIndex)
-      else {
-        let text = ''
-        if (this.getPlayer('me').positionOnMap === 0) {
-          text = `You brought the farmer to the castle! The castle defense has increased to ${
-            this.props.G.castleDefense + 1
-          }`
-        } else {
-          text = `You left the farmer at tile ${
-            this.getPlayer('me').positionOnMap
-          }. If a monster reaches him, he's toast!`
-        }
-        Swal.fire({
-          icon: this.getPlayer('me').positionOnMap === 0 ? 'success' : 'info',
-          title: 'Farmer dropped!',
-          text,
-        })
-        this.props.moves.dropFarmer(farmerTokenIndex)
-      }
+      const index = this.props.G.tokens.farmer.findIndex((farmer) => farmer.position === this.getPlayer('me').position)
+      this.canPickFarmer() ? this.props.moves.pickFarmer(index) : this.props.moves.dropFarmer(index)
     }
   }
 
   canDrink = () => {
-    const { tokens } = this.props.G
-    const wellTokenIndex = tokens.findIndex(
-      (token) => token.type === 'well' && token.positionOnMap === this.getPlayer('me').positionOnMap
-    )
-    const well = tokens[wellTokenIndex] as UsableToken
-    return wellTokenIndex > -1 && !well.used
+    const well = this.props.G.tokens.well.find((well) => well.position === this.getPlayer('me').position)
+    return well && !well.used
   }
 
   drink = () => {
-    const wellTokenIndex = this.props.G.tokens.findIndex(
-      (token) => token.type === 'well' && token.positionOnMap === this.getPlayer('me').positionOnMap
-    )
-    const willpower = this.getPlayer('me').specialAbilities.wellPower ? 5 : 3
-    Swal.fire({
-      icon: 'success',
-      title: 'Yummy!',
-      text: `You drank from the well and gained ${willpower} willpowers`,
-    })
-    this.props.moves.drink(wellTokenIndex, willpower)
+    const index = this.props.G.tokens.well.findIndex((well) => well.position === this.getPlayer('me').position)
+    const bonus = this.getPlayer('me').specialAbilities.wellPower
+    this.props.moves.drink(index, bonus)
   }
 
   canFight = () => {
-    const position = this.getPlayer('turn').positionOnMap
+    const position = this.getPlayer('turn').position
     const hoursPassed = this.getPlayer('turn').hoursPassed
     const monsters = this.props.G.monsters.filter(
       (monster) =>
-        monster.positionOnMap === position ||
-        (this.getPlayer('turn').specialAbilities.proxyAttack &&
-          tiles.neighbors[position].includes(monster.positionOnMap))
+        monster.position === position ||
+        (this.getPlayer('turn').specialAbilities.proxyAttack && tiles.neighbors[position].includes(monster.position))
     )
     if (this.isActivePlayer() && monsters.length > 0 && hoursPassed < 10) {
       if (hoursPassed < 7 || (hoursPassed >= 7 && this.getPlayer('turn').willpower >= 3)) {
@@ -489,18 +442,15 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   }
 
   fight = () => {
-    const position = this.getPlayer('turn').positionOnMap
     const monsters = this.props.G.monsters.filter(
       (monster) =>
-        monster.positionOnMap === position ||
+        monster.position === this.getPlayer('turn').position ||
         (this.getPlayer('turn').specialAbilities.proxyAttack &&
-          tiles.neighbors[position].includes(monster.positionOnMap))
+          tiles.neighbors[this.getPlayer('turn').position].includes(monster.position))
     )
     if (monsters.length > 1) {
       let inputOptions: { [inputValue: string]: string } = {}
-      monsters.forEach(
-        (monster) => (inputOptions[monster.positionOnMap.toString()] = `${monster.positionOnMap}: ${monster.type}`)
-      )
+      monsters.forEach((monster) => (inputOptions[monster.id.toString()] = `${monster.position}: ${monster.type}`))
       Swal.fire({
         title: 'Which monster to attack',
         input: 'select',
@@ -511,7 +461,8 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
         this.props.moves.startFight(parseInt(res.value))
       })
     } else {
-      this.props.moves.startFight(monsters[0].positionOnMap)
+      console.log('monsters', monsters)
+      this.props.moves.startFight(monsters[0].id)
     }
   }
 
@@ -525,7 +476,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   renderPlayers = () => {
     const players = this.props.G.players
     return Object.keys(players).map((playerID) => {
-      const positionOnMap = players[playerID].positionOnMap
+      const position = players[playerID].position
       return (
         <img
           key={playerID}
@@ -533,7 +484,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
           alt="character"
           className="character"
           style={{
-            ...this.getPlayerPosition(positionOnMap, playerID),
+            ...this.getPlayerPosition(position, playerID),
             ...this.getCharacterSize(),
           }}
         />
@@ -551,7 +502,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
           alt="monster"
           className="character"
           style={{
-            ...this.getPlayerPosition(monster.positionOnMap, monster.startingPos),
+            ...this.getPlayerPosition(monster.position, monster.id),
             ...this.getCharacterSize(),
           }}
         />
@@ -579,29 +530,36 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   }
 
   renderTokens = () => {
-    const tokens = this.props.G.tokens
-    return tokens.map((token, key) => {
-      let coords = this.MAP.areas[token.positionOnMap].coords
-      let tokenType: TokenType | 'empty-well' = token.type
-      if (token.type === 'fog') {
-        coords = tiles.fogAreas[token.positionOnMap]
-      } else if (token.type === 'well') {
-        coords = tiles.wellAreas[token.positionOnMap]
-        if ((token as UsableToken).used) tokenType = 'empty-well'
-      }
-      return (
-        <img
-          key={key}
-          alt={token.type}
-          src={this.tokens[tokenType]}
-          className="character"
-          style={{
-            ...this.getTokenPosition({ coords }),
-            ...this.getTokenSize(token.type),
-          }}
-        />
+    const tokens = []
+    for (let type in this.props.G.tokens) {
+      const subtok = this.props.G.tokens[type as TokenType] as any[]
+      tokens.push(
+        subtok.map((token: any, key: number) => {
+          let coords = this.MAP.areas[token.position].coords
+          let tokenType = type
+          if (type === 'fog') {
+            coords = tiles.fogAreas[token.position]
+          } else if (type === 'well') {
+            coords = tiles.wellAreas[token.position]
+            if (token.used) tokenType = 'empty-well'
+          }
+
+          return (
+            <img
+              key={key}
+              alt={tokenType}
+              src={this.tokens[tokenType]}
+              className="character"
+              style={{
+                ...this.getTokenPosition({ coords }),
+                ...this.getTokenSize(type as TokenType),
+              }}
+            />
+          )
+        })
       )
-    })
+    }
+    return tokens
   }
 
   handleNewUserMessage = (newMessage: string) => {
@@ -620,43 +578,51 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
       let html = ''
       let timer = 1000
       let icon = 'info' as 'error' | 'question' | 'success' | 'warning' | 'info' | undefined
-      if (status === 'new day') {
+      if (status.id === 'new day') {
         title = 'A new day has started'
         timer = 6000
         html = `<div>
         <p>Castle health: ${this.props.G.castleDefense}</p>
         <p>Narrator: ${this.props.G.letter}</p>
-        <p># of monsters remaining: ${
-          this.props.G.monsters.filter((monster) => monster.positionOnMap !== 80).length
-        }</p>
+        <p># of monsters remaining: ${this.props.G.monsters.filter((monster) => monster.position !== 80).length}</p>
         </div>`
-      } else if (status === 'next turn') {
+      } else if (status.id === 'next turn') {
         title = `${this.props.G.players[this.props.ctx.currentPlayer].name} turn has started`
         timer = 1000
-      } else if (status === 'farmer picked') {
+      } else if (status.id === 'farmer picked') {
         icon = 'success'
         title = 'Farmer picked!'
         html = 'Bring him to the castle to increase the castle defense.'
-      } else if (status === 'fight summary') {
+      } else if (status.id === 'farmer dropped') {
+        title = 'Farmer dropped!'
+        if (status.data.position === 0)
+          html = `You brought the farmer to the castle! The castle defense has increased to ${
+            this.props.G.castleDefense + 1
+          }`
+        else html = `You left the farmer at tile ${status.data.position}. If a monster reaches him, he's toast!`
+      } else if (status.id === 'fight summary') {
         title = 'Fight Summary'
-        if (this.props.G.fight.result) {
-          const { monster, player, summary } = this.props.G.fight.result
-          html = `
+        const { monster, player, summary } = status.data
+        html = `
         <div>
           <div>
             <div>${player.name}: ${player.attack}</div>
-            <div>${monster.name}: ${monster.attack}</div>
+            <div>${monster.type}: ${monster.attack}</div>
           </div>
           <div>${summary}</div>
         </div>`
-          timer = 6000
-        }
-      } else if (status === 'game over') {
+        timer = 6000
+      } else if (status.id === 'drink well') {
+        title = 'Yummy!'
+        html = `<p>${status.data.player.name} drank from the well and gained 3 willpowers</p>`
+        if (status.data.bonus)
+          html += `<p>${status.data.player.name} gained an additional +2 willpowers due to his special ability!</p>`
+      } else if (status.id === 'game over') {
         title = 'Game Over'
         html = 'You lost, loser.'
         timer = 10000000000
       }
-      if (status === 'next turn' && this.getPlayer('turn').endDay) {
+      if (status.id === 'next turn' && this.getPlayer('turn').endDay) {
         this.props.moves.clearStatus()
       } else {
         Swal.fire({
@@ -666,11 +632,11 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
           timer,
           timerProgressBar: true,
           onBeforeOpen: () => {
-            status !== 'game over' && Swal.showLoading()
+            status.id !== 'game over' && Swal.showLoading()
           },
         }).then(() => {
-          let endTurn = status === 'fight summary'
-          status !== 'game over' && this.props.moves.clearStatus(endTurn)
+          let endTurn = status.id === 'fight summary'
+          status.id !== 'game over' && this.props.moves.clearStatus(endTurn)
         })
       }
     }
@@ -808,7 +774,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
           open={!this.isEmpty(this.props.G.resources.total)}
           names={this.props.gameMetadata.map((player: any) => player.name)}
         />
-        <Widget title="In Game Chat" subtitle="" handleNewUserMessage={this.handleNewUserMessage} />
+        {this.state.uid && <Widget title="In Game Chat" subtitle="" handleNewUserMessage={this.handleNewUserMessage} />}
       </div>
     )
   }

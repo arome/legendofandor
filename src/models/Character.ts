@@ -6,17 +6,16 @@ export type SpecialAbility = 'proxyAttack' | 'bait' | 'wellPower' | 'flipDice'
 export type RewardType = 'gold' | 'willpower'
 
 export interface Character {
+    readonly id: number;
     readonly numDice: number[];
     willpower: number;
     strength: number;
-    readonly id?: string;
-    positionOnMap: number;
+    position: number;
 }
 
 export interface Monster extends Character {
     readonly type: MonsterType;
     readonly rewards: { [key in RewardType]: number };
-    readonly startingPos: number;
 }
 
 export interface Hero extends Character {
@@ -24,7 +23,7 @@ export interface Hero extends Character {
     readonly type: HeroType;
     hoursPassed: number;
     specialAbilities: { [key in SpecialAbility]: boolean };
-    pickedFarmer: number[];
+    pickedFarmers: number[];
     items: { [key in ItemType]: number }
     endDay: boolean;
     hoveredArea: any;

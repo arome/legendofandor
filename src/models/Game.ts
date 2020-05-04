@@ -1,14 +1,18 @@
 import { Game } from 'boardgame.io';
 import { Hero, Monster } from './Character';
-import { Token } from './Token';
+import { UsableToken, FarmerToken } from './Token';
 
 export type ItemType = 'gold' | 'wineskin'
 export interface IG extends Game {
     readonly difficulty: 'easy' | 'hard';
     players: { [key: string]: Hero }
     monsters: Monster[];
-    tokens: Token[];
-    status: string;
+    tokens: {
+        fog: UsableToken[],
+        well: UsableToken[],
+        farmer: FarmerToken[]
+    };
+    status: { id: string, data: any };
     castleDefense: number;
     rollingDices: number[];
     letter: string;

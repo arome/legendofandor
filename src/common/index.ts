@@ -8,53 +8,53 @@ export const server = hostname === 'localhost' ? `http://${hostname}:${PORT}` : 
 export const name = 'legend-of-andor'
 
 export type heroColor = 'green' | 'yellow' | 'purple' | 'blue';
-export const heroes: { [key in HeroType]: { color: heroColor, numDice: number[], specialAbility: SpecialAbility, positionOnMap: number } } = {
+export const heroes: { [key in HeroType]: { color: heroColor, numDice: number[], specialAbility: SpecialAbility, position: number } } = {
   Archer_female: {
     color: 'green',
     numDice: [3, 4, 5],
     specialAbility: 'proxyAttack',
-    positionOnMap: 25,
+    position: 25,
   },
   Archer_male: {
     color: 'green',
     numDice: [3, 4, 5],
     specialAbility: 'proxyAttack',
-    positionOnMap: 25,
+    position: 25,
   },
   Dwarf_female: {
     color: 'yellow',
     numDice: [1, 2, 3],
     specialAbility: 'bait',
-    positionOnMap: 7,
+    position: 7,
   },
   Dwarf_male: {
     color: 'yellow',
     numDice: [1, 2, 3],
     specialAbility: 'bait',
-    positionOnMap: 7,
+    position: 7,
   },
   Warrior_male: {
     color: 'blue',
     numDice: [2, 3, 4],
     specialAbility: 'wellPower',
-    positionOnMap: 14,
+    position: 14,
   },
   Warrior_female: {
     color: 'blue',
     numDice: [2, 3, 4],
     specialAbility: 'wellPower',
-    positionOnMap: 14,
+    position: 14,
   },
   Mage_male: {
     color: 'purple',
     numDice: [1, 1, 1],
     specialAbility: 'flipDice',
-    positionOnMap: 34,
+    position: 34,
   },
   Mage_female: {
     color: 'purple',
     numDice: [1, 1, 1],
     specialAbility: 'flipDice',
-    positionOnMap: 34,
+    position: 34,
   },
 }
