@@ -73,12 +73,14 @@ const allPlayersMove = {
       }
       G.players[player].path = steps
     },
+    noLimit: true,
     redact: true,
   },
   setHoveredArea: {
     move: (G: IG, ctx: Ctx, area: any) => {
       G.players[ctx.playerID ?? 0].hoveredArea = area
     },
+    noLimit: true,
     redact: true,
   },
   drink(G: IG, ctx: Ctx, wellTokenIndex: number, willpower: number) {
@@ -109,14 +111,18 @@ const allPlayersMove = {
     }
     G.tokens = tokens
   },
-  clearStatus: (G: IG, ctx: Ctx, endTurn: boolean) => {
-    if (endTurn) {
-      G.fight = {}
-      // @ts-ignore
-      ctx.events?.endTurn();
-    }
-    G.status = null
-  },
+  clearStatus: {
+    move: (G: IG, ctx: Ctx, endTurn: boolean) => {
+      if (endTurn) {
+        G.fight = {}
+        // @ts-ignore
+        ctx.events?.endTurn();
+      }
+      G.status = null
+    },
+    noLimit: true,
+    redact: true
+  }
 }
 
 const LegendOfAndor = {
@@ -188,7 +194,6 @@ const LegendOfAndor = {
     return {
       difficulty,
       rollingDices: [],
-      dices: [0, 0],
       round: 0,
       legend: 1,
       letter: 'A',
@@ -246,41 +251,46 @@ const LegendOfAndor = {
         ctx.events?.setActivePlayers({ all: 'splitresource' })
       },
       redact: true,
+      noLimit: true
     },
-    move(G: IG, ctx: Ctx, to: number) {
-      const player = currentPlayer(G, ctx)
-      G.players[ctx.currentPlayer].positionOnMap = to
-      if (player.pickedFarmer.length > 0) {
-        const farmers = G.tokens.filter((token) => token.type === 'farmer') as FarmerToken[]
-        const nonFarmers = G.tokens.filter((token) => token.type !== 'farmer')
-        const newFarmers = farmers.map((farmer) => {
-          if (player.pickedFarmer.includes(farmer.startingPos)) farmer.positionOnMap = to
-          return farmer
-        })
-        G.tokens = nonFarmers.concat(newFarmers)
-      }
-      let newTotalHours = G.players[ctx.currentPlayer].hoursPassed + player.path.length
-      if (newTotalHours > 7) {
-        G.players[ctx.currentPlayer].willpower -= 2 * Math.min(newTotalHours - 7, player.path.length)
-      }
-      if (newTotalHours === 10) {
-        G.players[ctx.currentPlayer].endDay = true
-        newTotalHours = 0
-      }
-      G.players[ctx.currentPlayer].hoursPassed = newTotalHours
-      if (Object.keys(tiles.fogAreas).indexOf(to + '') > -1) {
-        let tokens = G.tokens
-        const fogTokenIndex = tokens.findIndex((token) => token.type === 'fog' && token.positionOnMap === to)
-        tokens.splice(fogTokenIndex, 1)
-        G.tokens = tokens
+    move: {
+      move: (G: IG, ctx: Ctx, to: number) => {
+        const player = currentPlayer(G, ctx)
+        G.players[ctx.currentPlayer].positionOnMap = to
+        if (player.pickedFarmer.length > 0) {
+          const farmers = G.tokens.filter((token) => token.type === 'farmer') as FarmerToken[]
+          const nonFarmers = G.tokens.filter((token) => token.type !== 'farmer')
+          const newFarmers = farmers.map((farmer) => {
+            if (player.pickedFarmer.includes(farmer.startingPos)) farmer.positionOnMap = to
+            return farmer
+          })
+          G.tokens = nonFarmers.concat(newFarmers)
+        }
+        let newTotalHours = G.players[ctx.currentPlayer].hoursPassed + player.path.length
+        if (newTotalHours > 7) {
+          G.players[ctx.currentPlayer].willpower -= 2 * Math.min(newTotalHours - 7, player.path.length)
+        }
+        if (newTotalHours === 10) {
+          G.players[ctx.currentPlayer].endDay = true
+          newTotalHours = 0
+        }
+        G.players[ctx.currentPlayer].hoursPassed = newTotalHours
+        if (Object.keys(tiles.fogAreas).indexOf(to + '') > -1) {
+          let tokens = G.tokens
+          const fogTokenIndex = tokens.findIndex((token) => token.type === 'fog' && token.positionOnMap === to)
+          tokens.splice(fogTokenIndex, 1)
+          G.tokens = tokens
 
-        // Object.keys(G.players).forEach(playerID => {
-        //   G.players[playerID].willpower += 1
-        // })
-        console.log('activating fog effect')
-      }
-      // @ts-ignore
-      ctx.events?.endTurn()
+          // Object.keys(G.players).forEach(playerID => {
+          //   G.players[playerID].willpower += 1
+          // })
+          console.log('activating fog effect')
+        }
+        // @ts-ignore
+        ctx.events?.endTurn()
+      },
+      redact: false,
+      noLimit: false
     },
     skipTurn(G: IG, ctx: Ctx) {
       if (G.players[ctx.playerID ?? 0].hoursPassed === 10) {
@@ -304,66 +314,46 @@ const LegendOfAndor = {
         rollingDices: ctx.random?.D6(numberOfDice(currentPlayer(G, ctx))),
       }
     },
-    monsterAttack: (G: IG, ctx: Ctx) => {
-      const monster = G.monsters.filter((monster) => monster.positionOnMap === G.fight.monster.position)[0]
-      let newValue = G.rollingDices
-      if (currentPlayer(G, ctx).specialAbilities.flipDice) {
-        newValue = [G.rollingDices[0] < 4 ? 7 - G.rollingDices[0] : G.rollingDices[0]]
-      }
-      G.fight['player'] = newValue
-      G.fight['turn'] = 'monster'
-      G.rollingDices = ctx.random?.D6(numberOfDice(monster)) as number[]
+    monsterAttack: {
+      move: (G: IG, ctx: Ctx) => {
+        const monster = G.monsters.filter((monster) => monster.positionOnMap === G.fight.monster.position)[0]
+        let newValue = G.rollingDices
+        if (currentPlayer(G, ctx).specialAbilities.flipDice) {
+          newValue = [G.rollingDices[0] < 4 ? 7 - G.rollingDices[0] : G.rollingDices[0]]
+        }
+        G.fight['player'] = newValue
+        G.fight['turn'] = 'monster'
+        G.rollingDices = ctx.random?.D6(numberOfDice(monster)) as number[]
+      },
+      redact: true,
+      noLimit: true
     },
-    endFight: (G: IG, ctx: Ctx) => {
-      let summary = ''
-      const monsterIndex = G.monsters.findIndex((monster) => monster.startingPos === G.fight.monster.position)
-      let monsters = G.monsters
-      let monster = monsters.splice(monsterIndex, 1)[0]
-      const playerAttack = Math.max(...G.fight.player) + currentPlayer(G, ctx).strength
-      const monsterRoll = G.rollingDices
-      const highestValues = monsterRoll.filter((die) => die === Math.max(...monsterRoll))
-      const monsterAttack = highestValues.reduce((a, b) => a + b, 0) + monster.strength
-      const fightResult = playerAttack - monsterAttack
-      if (fightResult > 0) {
-        monster.willpower -= fightResult
-        summary += `<p>The ${monster.type} lost ${fightResult} willpower${fightResult > 1 ? 's' : ''}.</p>`
-      } else if (fightResult < 0) {
-        G.players[ctx.currentPlayer].willpower += fightResult
-        summary += `<p>${currentPlayer(G, ctx).name} lost ${fightResult} willpower${fightResult > 1 ? 's' : ''}.</p>`
-      } else {
-        summary += `<p>The fight ended in a draw.</p>`
-      }
+    endFight: {
+      move: (G: IG, ctx: Ctx) => {
+        let summary = ''
+        const monsterIndex = G.monsters.findIndex((monster) => monster.startingPos === G.fight.monster.position)
+        let monsters = G.monsters
+        let monster = monsters.splice(monsterIndex, 1)[0]
+        const playerAttack = Math.max(...G.fight.player) + currentPlayer(G, ctx).strength
+        const monsterRoll = G.rollingDices
+        const highestValues = monsterRoll.filter((die) => die === Math.max(...monsterRoll))
+        const monsterAttack = highestValues.reduce((a, b) => a + b, 0) + monster.strength
+        const fightResult = playerAttack - monsterAttack
+        if (fightResult > 0) {
+          monster.willpower -= fightResult
+          summary += `<p>The ${monster.type} lost ${fightResult} willpower${fightResult > 1 ? 's' : ''}.</p>`
+        } else if (fightResult < 0) {
+          G.players[ctx.currentPlayer].willpower += fightResult
+          summary += `<p>${currentPlayer(G, ctx).name} lost ${fightResult} willpower${fightResult > 1 ? 's' : ''}.</p>`
+        } else {
+          summary += `<p>The fight ended in a draw.</p>`
+        }
 
-      if (monster.willpower < 1) {
-        monster.positionOnMap = 80
-        G.letter = String.fromCharCode(G.letter.charCodeAt(0) + 1)
-        if (G.letter === 'C') {
-          let newMonsters = G.monsters
-          newMonsters.push({
-            type: 'Gor',
-            numDice: [2, 3, 3],
-            willpower: 4,
-            strength: 2,
-            reward: {
-              gold: 2,
-              willpower: 2,
-            },
-            startingPos: 32,
-            positionOnMap: 32,
-          })
-          newMonsters.push({
-            type: 'Skrall',
-            numDice: [2, 3, 3],
-            willpower: 6,
-            reward: {
-              gold: 4,
-              willpower: 4,
-            },
-            strength: 6,
-            startingPos: 39,
-            positionOnMap: 39,
-          })
-          if (G.difficulty !== 'easy') {
+        if (monster.willpower < 1) {
+          monster.positionOnMap = 80
+          G.letter = String.fromCharCode(G.letter.charCodeAt(0) + 1)
+          if (G.letter === 'C') {
+            let newMonsters = G.monsters
             newMonsters.push({
               type: 'Gor',
               numDice: [2, 3, 3],
@@ -373,39 +363,67 @@ const LegendOfAndor = {
                 gold: 2,
                 willpower: 2,
               },
-              startingPos: 43,
-              positionOnMap: 43,
+              startingPos: 32,
+              positionOnMap: 32,
             })
+            newMonsters.push({
+              type: 'Skrall',
+              numDice: [2, 3, 3],
+              willpower: 6,
+              reward: {
+                gold: 4,
+                willpower: 4,
+              },
+              strength: 6,
+              startingPos: 39,
+              positionOnMap: 39,
+            })
+            if (G.difficulty !== 'easy') {
+              newMonsters.push({
+                type: 'Gor',
+                numDice: [2, 3, 3],
+                willpower: 4,
+                strength: 2,
+                reward: {
+                  gold: 2,
+                  willpower: 2,
+                },
+                startingPos: 43,
+                positionOnMap: 43,
+              })
+            }
+            G.monsters = newMonsters
           }
-          G.monsters = newMonsters
-        }
-        G.players[ctx.currentPlayer].gold += monster.reward.gold
-        G.players[ctx.currentPlayer].willpower += monster.reward.willpower
-        summary += `<p>The ${monster.type} has been defeated!</p>
+          G.players[ctx.currentPlayer].gold += monster.reward.gold
+          G.players[ctx.currentPlayer].willpower += monster.reward.willpower
+          summary += `<p>The ${monster.type} has been defeated!</p>
         <p>${currentPlayer(G, ctx).name} received ${monster.reward.gold} golds and ${
-          monster.reward.willpower
-          } willpowers.</p>`
-      } else if (G.players[ctx.currentPlayer].willpower < 1) {
-        G.players[ctx.currentPlayer].willpower = 3
-        G.players[ctx.currentPlayer].strength = Math.max(G.players[ctx.currentPlayer].strength - 1, 0)
-        summary += `<p>${currentPlayer(G, ctx).name} has been defeated and now has ${Math.max(
-          G.players[ctx.currentPlayer].strength - 1,
-          0
-        )} strength point. ${currentPlayer(G, ctx).name} willpower were reset to 3.</p>`
-      }
-      monsters.push(monster)
-      G.monsters = monsters
-      G.players[ctx.currentPlayer].hoursPassed += 1
-      G.status = 'fight summary'
-      G.fight = {
-        result: {
-          player: { name: currentPlayer(G, ctx).name, attack: playerAttack },
-          monster: { name: monster.type, attack: monsterAttack },
-          summary,
-        },
-      }
-      G.dices = []
-      G.rollingDices = []
+            monster.reward.willpower
+            } willpowers.</p>`
+        } else if (G.players[ctx.currentPlayer].willpower < 1) {
+          G.players[ctx.currentPlayer].willpower = 3
+          G.players[ctx.currentPlayer].strength = Math.max(G.players[ctx.currentPlayer].strength - 1, 0)
+          summary += `<p>${currentPlayer(G, ctx).name} has been defeated and now has ${Math.max(
+            G.players[ctx.currentPlayer].strength - 1,
+            0
+          )} strength point. ${currentPlayer(G, ctx).name} willpower were reset to 3.</p>`
+        }
+        monsters.push(monster)
+        G.monsters = monsters
+        G.players[ctx.currentPlayer].hoursPassed += 1
+        G.status = 'fight summary'
+        G.fight = {
+          result: {
+            player: { name: currentPlayer(G, ctx).name, attack: playerAttack },
+            monster: { name: monster.type, attack: monsterAttack },
+            summary,
+          },
+        }
+        G.rollingDices = []
+
+      },
+      redact: true,
+      noLimit: true
     },
   },
 
@@ -532,24 +550,32 @@ const LegendOfAndor = {
     stages: {
       splitresource: {
         moves: {
-          add(G: IG, ctx: Ctx, type: 'gold' | 'wineskin', quantity: number, playerID: number) {
-            let currentTotal = 0
-            Object.keys(G.tempSplit).forEach((key) =>
-              (currentTotal += G.tempSplit[parseInt(key)][type] ?? 0)
-            )
-            if ((G.tempSplit[playerID][type] ?? 0) + quantity >= 0 && currentTotal + quantity <= (G.splittableResource[type] ?? 0))
-              G.tempSplit[playerID][type] = (G.tempSplit[playerID][type] ?? 0) + quantity
+          add: {
+            move: (G: IG, ctx: Ctx, type: 'gold' | 'wineskin', quantity: number, playerID: number) => {
+              let currentTotal = 0
+              Object.keys(G.tempSplit).forEach((key) =>
+                (currentTotal += G.tempSplit[parseInt(key)][type] ?? 0)
+              )
+              if ((G.tempSplit[playerID][type] ?? 0) + quantity >= 0 && currentTotal + quantity <= (G.splittableResource[type] ?? 0))
+                G.tempSplit[playerID][type] = (G.tempSplit[playerID][type] ?? 0) + quantity
+            },
+            redact: true,
+            noLimit: true
           },
-          splitResource(G: IG, ctx: Ctx) {
-            Object.keys(G.tempSplit).forEach((key) => {
-              const res = G.tempSplit[parseInt(key)]
-              Object.keys(res).map((type) => (G.players[key][type as 'gold' | 'wineskin'] += res[type as 'gold' | 'wineskin'] ?? 0))
-            })
-            G.tempSplit = {}
-            G.splittableResource = {}
-            // @ts-ignore
-            ctx.events?.setActivePlayers({ others: 'displayMapInput', currentPlayer: 'play' })
-          },
+          splitResource: {
+            move: (G: IG, ctx: Ctx) => {
+              Object.keys(G.tempSplit).forEach((key) => {
+                const res = G.tempSplit[parseInt(key)]
+                Object.keys(res).map((type) => (G.players[key][type as 'gold' | 'wineskin'] += res[type as 'gold' | 'wineskin'] ?? 0))
+              })
+              G.tempSplit = {}
+              G.splittableResource = {}
+              // @ts-ignore
+              ctx.events?.setActivePlayers({ others: 'displayMapInput', currentPlayer: 'play' })
+            },
+            redact: true,
+            noLimit: true
+          }
         },
       },
       play: {},

@@ -14,7 +14,7 @@ import { ClockLoader } from 'react-spinners'
 import { Widget, addResponseMessage, addUserMessage } from 'react-chat-widget'
 import 'react-chat-widget/lib/styles.css'
 import { CometChat } from '@cometchat-pro/chat'
-import { HeroType, Hero } from '../models/Character'
+import { HeroType } from '../models/Character'
 
 export default () => {
   const { gameID } = useParams()

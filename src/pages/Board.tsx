@@ -49,7 +49,6 @@ interface GameBoardState {
 }
 export default class GameBoard extends Component<GameBoardProps, GameBoardState> {
   MAP: any
-  areas: any
   playerCharacters: any
   monsterCharacters: any
   tokens: any
@@ -644,6 +643,7 @@ export default class GameBoard extends Component<GameBoardProps, GameBoardState>
   }
 
   render() {
+    console.log('this', this)
     const override = css`
       position: absolute;
       top: 50%;
