@@ -22,7 +22,7 @@
     "axios": "^0.19.2",
     "babel-node": "0.0.1-security",
     "boardgame.io": "^0.39.10",
-    "bootstrap": "^4.4.1",
+    "bootstrap": "^5.2.2",
     "bufferutil": "^4.0.1",
     "cross-env": "^7.0.2",
     "esm": "^3.2.25",
